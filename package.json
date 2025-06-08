@@ -1,37 +1,24 @@
 {
-  "name": "tauri-app-template",
+  "name": "sonnun",
   "version": "0.1.0",
-  "description": "A template for building desktop applications with Tauri",
-  "author": "Valmisson Grizorte <valmisson.github.io>",
+  "description": "Provenance-aware markdown editor with cryptographic content verification",
+  "author": "Sonnun Team",
   "private": true,
   "license": "MIT",
-  "workspaces": [
-    "packages/src-tauri",
-    "packages/src-renderer"
-  ],
   "scripts": {
-    "dev": "cd packages && tauri dev",
-    "build": "cd packages && tauri build",
-    "dev:renderer": "cd packages/src-renderer && yarn dev",
-    "build:renderer": "cd packages/src-renderer && yarn build",
-    "lint": "cd packages/src-renderer && yarn lint",
-    "icons": "cd packages && tauri icon src-tauri/app-icon.png",
-    "tauri": "cd packages && tauri"
-  },
-  "devDependencies": {
-    "@tauri-apps/cli": "^1.6.2",
-    "lint-staged": "^15.2.10",
-    "yorkie": "^2.0.0"
-  },
-  "gitHooks": {
-    "pre-commit": "lint-staged"
-  },
-  "lint-staged": {
-    "packages/src-renderer/src/**/*.{js,ts}": [
-      "yarn lint --fix"
-    ]
+    "dev": "cd sonnun && npm run tauri dev",
+    "build": "cd sonnun && npm run tauri build",
+    "dev:frontend": "cd sonnun && npm run dev",
+    "build:frontend": "cd sonnun && npm run build",
+    "test": "cd sonnun && npm test",
+    "test:rust": "cd sonnun/src-tauri && cargo test",
+    "lint": "cd sonnun && npm run lint",
+    "format": "cd sonnun && npm run format"
   },
   "engines": {
-    "node": ">=14.16.x"
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
   }
 }

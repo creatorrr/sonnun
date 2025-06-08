@@ -1,6 +1,8 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useImperativeHandle, forwardRef } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
+import { Extension } from '@tiptap/core'
+import { Plugin, PluginKey } from 'prosemirror-state'
 import { invoke } from '@tauri-apps/api/tauri'
 import { ProvenanceMark } from '../extensions/ProvenanceMark'
 import CitationModal from './CitationModal'
@@ -24,11 +26,14 @@ interface CitationModalState {
   insertPosition?: number
 }
 
-const EditorPane: React.FC<EditorPaneProps> = ({ 
+const EditorPane = forwardRef<
+  { insertAIContent: (content: string, model: string) => void }, 
+  EditorPaneProps
+>(({ 
   onContentChange, 
   onProvenanceChange, 
   className = '' 
-}) => {
+}, ref) => {
   const [citationModal, setCitationModal] = useState<CitationModalState>({
     isOpen: false,
     pastedText: ''
@@ -99,12 +104,12 @@ const EditorPane: React.FC<EditorPaneProps> = ({
       }),
       ProvenanceMark,
       // AIDEV-NOTE: Security critical - intercepts ALL paste ops to enforce citation req (>50 chars)
-      {
+      Extension.create({
         name: 'pasteHandler',
         addProseMirrorPlugins() {
           return [
-            new (require('@tiptap/pm/state').Plugin)({
-              key: new (require('@tiptap/pm/state').PluginKey)('pasteHandler'),
+            new Plugin({
+              key: new PluginKey('pasteHandler'),
               props: {
                 handlePaste(view: any, event: ClipboardEvent, slice: any) {
                   const text = event.clipboardData?.getData('text/plain')
@@ -122,7 +127,7 @@ const EditorPane: React.FC<EditorPaneProps> = ({
                   
                   // Small pastes default to human content
                   if (text && text.length <= 50) {
-                    logProvenanceEvent('human', btoa(text), 'user', text.length)
+                    logProvenanceEvent('human', text, 'user', text.length)
                   }
                   
                   return false
@@ -131,7 +136,7 @@ const EditorPane: React.FC<EditorPaneProps> = ({
             })
           ]
         }
-      }
+      })
     ],
     content: '<p>Start writing your document...</p>',
     onUpdate: ({ editor }) => {
@@ -172,7 +177,7 @@ const EditorPane: React.FC<EditorPaneProps> = ({
     // Log the provenance event
     logProvenanceEvent(
       'cited', 
-      btoa(citationModal.pastedText), 
+      citationModal.pastedText, 
       citation.source, 
       citationModal.pastedText.length
     )
@@ -202,8 +207,13 @@ const EditorPane: React.FC<EditorPaneProps> = ({
       ]
     })
 
-    logProvenanceEvent('ai', btoa(content), model, content.length)
+    logProvenanceEvent('ai', content, model, content.length)
   }, [editor, logProvenanceEvent])
+
+  // AIDEV-NOTE: Expose insertAIContent method to parent via ref for component communication
+  useImperativeHandle(ref, () => ({
+    insertAIContent
+  }), [insertAIContent])
 
   return (
     <div className={`editor-pane ${className}`}>
@@ -240,6 +250,7 @@ const EditorPane: React.FC<EditorPaneProps> = ({
       />
     </div>
   )
-}
+})
 
+EditorPane.displayName = 'EditorPane'
 export default EditorPane

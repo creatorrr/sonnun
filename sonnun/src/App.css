@@ -114,6 +114,291 @@
   width: 60px;
 }
 
+/* Citation Modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-description {
+  margin-bottom: 1rem;
+  color: #666;
+}
+
+.pasted-preview {
+  background: #f5f5f5;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  border-left: 3px solid #FF9800;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.required {
+  color: red;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+}
+
+/* Assistant Panel styles */
+.assistant-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.toggle-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.25rem;
+}
+
+.assistant-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.assistant-settings {
+  padding: 1rem;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.setting-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.setting-group label {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.setting-group select,
+.setting-group input {
+  padding: 0.25rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.875rem;
+}
+
+.error-banner {
+  background: #fee;
+  color: #c00;
+  padding: 0.5rem 1rem;
+  margin: 0 1rem;
+  border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.messages-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.empty-state {
+  text-align: center;
+  color: #666;
+  padding: 2rem;
+}
+
+.hint {
+  font-style: italic;
+  font-size: 0.875rem;
+}
+
+.message {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.message.user {
+  background: #e3f2fd;
+  margin-left: 2rem;
+}
+
+.message.assistant {
+  background: #f5f5f5;
+  margin-right: 2rem;
+}
+
+.message-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.message-role {
+  font-weight: 500;
+}
+
+.message-content {
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.message-actions {
+  margin-top: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.input-form {
+  padding: 1rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.input-form textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  resize: vertical;
+  min-height: 60px;
+  font-family: inherit;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.input-hint {
+  font-size: 0.75rem;
+  color: #666;
+}
+
+/* Provenance Legend styles */
+.provenance-legend {
+  font-size: 0.875rem;
+}
+
+.legend-items {
+  display: flex;
+  gap: 1rem;
+}
+
+.legend-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.legend-color-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.legend-label {
+  font-weight: 500;
+}
+
+.legend-percentage {
+  font-weight: 600;
+  color: #333;
+}
+
+.legend-description {
+  font-size: 0.75rem;
+  color: #666;
+  max-width: 120px;
+}
+
+.legend-bar {
+  height: 4px;
+  background: #eee;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 0.5rem;
+  display: flex;
+}
+
+.bar-segment {
+  height: 100%;
+}
+
+.bar-segment.human {
+  background-color: #4CAF50;
+}
+
+.bar-segment.ai {
+  background-color: #2196F3;
+}
+
+.bar-segment.cited {
+  background-color: #FF9800;
+}
+
 /* Button styles */
 .btn-primary {
   background-color: #2196F3;

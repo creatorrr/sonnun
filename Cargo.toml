@@ -1,0 +1,15 @@
+[package]
+name = "core_test"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "core_test"
+path = "test_core.rs"
+
+[dependencies]
+sha2 = "0.10"
+ed25519-dalek = "2.0"
+rand = "0.8"
+base64 = "0.21"
+tokio = { version = "1", features = ["full"] }

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useRef } from 'react'
 import EditorPane from './components/EditorPane'
 import AssistantPanel from './components/AssistantPanel'
 import ProvenanceLegend from './components/ProvenanceLegend'
@@ -19,12 +19,16 @@ const App: React.FC = () => {
     citedPercentage: 0,
     totalCharacters: 0
   })
-  const [isAssistantOpen, setIsAssistantOpen] = useState(false)
+  const [isAssistantOpen, setIsAssistantOpen] = useState(true)
+  
+  // AIDEV-NOTE: Component communication - allows AssistantPanel to insert AI content into editor
+  const editorRef = useRef<{ insertAIContent: (content: string, model: string) => void } | null>(null)
 
   // AIDEV-NOTE: State orchestration - manages document content and provenance flow between components
   const handleInsertAIText = useCallback((content: string, model: string) => {
-    // This will be handled by EditorPane's insertAIContent method
-    console.log('AI content to insert:', { content, model })
+    if (editorRef.current?.insertAIContent) {
+      editorRef.current.insertAIContent(content, model)
+    }
   }, [])
 
   return (
@@ -38,6 +42,7 @@ const App: React.FC = () => {
       
       <main className="app-main">
         <EditorPane 
+          ref={editorRef}
           onContentChange={setDocumentContent}
           onProvenanceChange={setProvenanceStats}
           className="main-editor"

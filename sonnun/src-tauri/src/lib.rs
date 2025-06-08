@@ -1,9 +1,9 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 use serde::{Deserialize, Serialize};
 use sha2::{Sha256, Digest};
-use std::collections::HashMap;
-use tauri::{AppHandle, Manager};
-use tauri_plugin_sql::{Migration, MigrationKind};
+
+mod database;
+use database::Database;
 
 // AIDEV-NOTE: Foundation types - these structs define the entire provenance data model
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -44,46 +44,11 @@ pub struct AIResponse {
     pub token_count: Option<u32>,
 }
 
-// AIDEV-NOTE: Schema evolution - versioned migrations ensure data integrity across updates
-pub fn create_migrations() -> Vec<Migration> {
-    vec![
-        Migration {
-            version: 1,
-            description: "create_events_table",
-            sql: r#"
-                CREATE TABLE events (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    timestamp TEXT NOT NULL,
-                    event_type TEXT NOT NULL CHECK (event_type IN ('human', 'ai', 'cited')),
-                    text_hash TEXT NOT NULL,
-                    source TEXT NOT NULL,
-                    span_length INTEGER NOT NULL,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-                );
-                CREATE INDEX idx_events_timestamp ON events(timestamp);
-                CREATE INDEX idx_events_type ON events(event_type);
-                CREATE INDEX idx_events_source ON events(source);
-            "#,
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 2,
-            description: "create_document_metadata_table",
-            sql: r#"
-                CREATE TABLE document_metadata (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    document_hash TEXT UNIQUE NOT NULL,
-                    title TEXT,
-                    author TEXT,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    signature TEXT,
-                    public_key TEXT
-                );
-                CREATE INDEX idx_document_hash ON document_metadata(document_hash);
-            "#,
-            kind: MigrationKind::Up,
-        },
-    ]
+// AIDEV-NOTE: Security improvement - proper hash generation for provenance events
+pub fn hash_text(text: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(text.as_bytes());
+    format!("{:x}", hasher.finalize())
 }
 
 #[tauri::command]
@@ -94,134 +59,32 @@ pub fn greet(name: &str) -> String {
 // AIDEV-NOTE: Write path - all editor changes flow through this function for audit trail
 #[tauri::command]
 pub async fn log_provenance_event(
-    app: AppHandle,
     event: ProvenanceEvent,
 ) -> Result<EventResponse, String> {
-    use tauri_plugin_sql::{SqlitePool, Builder};
+    let db = Database::new();
+    let mut event_with_hash = event.clone();
     
-    // Get database connection
-    let pool = app.state::<SqlitePool>();
+    // Generate proper text hash 
+    event_with_hash.text_hash = hash_text(&event.text_hash);
     
-    // Generate text hash for the event
-    let mut hasher = Sha256::new();
-    hasher.update(event.text_hash.as_bytes());
-    let text_hash = format!("{:x}", hasher.finalize());
-    
-    // Insert event into database
-    let result = sqlx::query!(
-        r#"
-        INSERT INTO events (timestamp, event_type, text_hash, source, span_length)
-        VALUES (?1, ?2, ?3, ?4, ?5)
-        "#,
-        event.timestamp,
-        event.event_type,
-        text_hash,
-        event.source,
-        event.span_length as i64
-    )
-    .execute(&**pool)
-    .await
-    .map_err(|e| format!("Database insert failed: {}", e))?;
-    
-    Ok(EventResponse {
-        id: result.last_insert_rowid(),
-        text_hash,
-    })
+    db.insert_event(event_with_hash)
 }
 
 // AIDEV-NOTE: Read path - supports filtering by type/limit for manifest generation and UI
 #[tauri::command]
 pub async fn get_event_history(
-    app: AppHandle,
     limit: Option<u32>,
     event_type: Option<String>,
 ) -> Result<Vec<ProvenanceEvent>, String> {
-    let pool = app.state::<SqlitePool>();
-    let limit = limit.unwrap_or(100) as i64;
-    
-    let events = if let Some(filter_type) = event_type {
-        sqlx::query_as!(
-            ProvenanceEvent,
-            r#"
-            SELECT timestamp, event_type, text_hash, source, span_length as "span_length: usize"
-            FROM events 
-            WHERE event_type = ?1
-            ORDER BY timestamp DESC 
-            LIMIT ?2
-            "#,
-            filter_type,
-            limit
-        )
-        .fetch_all(&**pool)
-        .await
-        .map_err(|e| format!("Database query failed: {}", e))?
-    } else {
-        sqlx::query_as!(
-            ProvenanceEvent,
-            r#"
-            SELECT timestamp, event_type, text_hash, source, span_length as "span_length: usize"
-            FROM events 
-            ORDER BY timestamp DESC 
-            LIMIT ?1
-            "#,
-            limit
-        )
-        .fetch_all(&**pool)
-        .await
-        .map_err(|e| format!("Database query failed: {}", e))?
-    };
-    
-    Ok(events)
+    let db = Database::new();
+    db.get_events(limit, event_type)
 }
 
 // AIDEV-NOTE: Analytics engine - calculates percentages and stats for transparency reports
 #[tauri::command]
-pub async fn generate_manifest(app: AppHandle) -> Result<ManifestData, String> {
-    let pool = app.state::<SqlitePool>();
-    
-    // Get provenance statistics
-    let stats = sqlx::query!(
-        r#"
-        SELECT 
-            event_type,
-            SUM(span_length) as total_length,
-            COUNT(*) as event_count
-        FROM events 
-        GROUP BY event_type
-        "#
-    )
-    .fetch_all(&**pool)
-    .await
-    .map_err(|e| format!("Database query failed: {}", e))?;
-    
-    let mut type_stats: HashMap<String, usize> = HashMap::new();
-    let mut total_characters = 0;
-    
-    for stat in stats {
-        let length = stat.total_length.unwrap_or(0) as usize;
-        type_stats.insert(stat.event_type.clone(), length);
-        total_characters += length;
-    }
-    
-    // Calculate percentages
-    let human_chars = type_stats.get("human").unwrap_or(&0);
-    let ai_chars = type_stats.get("ai").unwrap_or(&0);
-    let cited_chars = type_stats.get("cited").unwrap_or(&0);
-    
-    let human_percentage = if total_characters > 0 { (*human_chars as f64 / total_characters as f64) * 100.0 } else { 0.0 };
-    let ai_percentage = if total_characters > 0 { (*ai_chars as f64 / total_characters as f64) * 100.0 } else { 0.0 };
-    let cited_percentage = if total_characters > 0 { (*cited_chars as f64 / total_characters as f64) * 100.0 } else { 0.0 };
-    
-    // Get recent events
-    let events = get_event_history(app, Some(50), None).await?;
-    
-    Ok(ManifestData {
-        human_percentage,
-        ai_percentage,
-        cited_percentage,
-        total_characters,
-        events,
-    })
+pub async fn generate_manifest() -> Result<ManifestData, String> {
+    let db = Database::new();
+    db.generate_manifest()
 }
 
 // AIDEV-NOTE: AI gateway - handles OpenAI API calls with proper error handling and attribution
@@ -231,6 +94,10 @@ pub async fn query_ai_assistant(
 ) -> Result<AIResponse, String> {
     let api_key = std::env::var("OPENAI_API_KEY")
         .map_err(|_| "OPENAI_API_KEY environment variable not set")?;
+    
+    if prompt_data.prompt.trim().is_empty() {
+        return Err("Prompt cannot be empty".to_string());
+    }
     
     let client = reqwest::Client::new();
     let model = prompt_data.model.unwrap_or_else(|| "gpt-3.5-turbo".to_string());
@@ -257,7 +124,10 @@ pub async fn query_ai_assistant(
         .map_err(|e| format!("API request failed: {}", e))?;
     
     if !response.status().is_success() {
-        return Err(format!("API error: {}", response.status()));
+        let status = response.status();
+        let error_text = response.text().await
+            .unwrap_or_else(|_| "Failed to read error response".to_string());
+        return Err(format!("API error {}: {}", status, error_text));
     }
     
     let response_data: serde_json::Value = response
@@ -288,6 +158,10 @@ pub async fn sign_document(
     private_key_bytes: Vec<u8>,
 ) -> Result<String, String> {
     use ed25519_dalek::{Signer, SigningKey};
+    
+    if content.is_empty() {
+        return Err("Content cannot be empty".to_string());
+    }
     
     // Parse private key
     let signing_key = SigningKey::from_bytes(
@@ -327,6 +201,10 @@ pub fn verify_signature(
 ) -> Result<bool, String> {
     use ed25519_dalek::{Verifier, VerifyingKey, Signature};
     
+    if content.is_empty() {
+        return Err("Content cannot be empty".to_string());
+    }
+    
     let public_key_bytes = base64::decode(public_key_b64)
         .map_err(|_| "Invalid public key encoding")?;
     let signature_bytes = base64::decode(signature_b64)
@@ -352,11 +230,6 @@ pub fn verify_signature(
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .plugin(
-            tauri_plugin_sql::Builder::default()
-                .add_migrations("sqlite:sonnun.db", create_migrations())
-                .build()
-        )
         .invoke_handler(tauri::generate_handler![
             greet,
             log_provenance_event,
@@ -369,4 +242,99 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_hash_text() {
+        let text = "Hello, world!";
+        let hash = hash_text(text);
+        assert_eq!(hash.len(), 64); // SHA256 produces 32-byte (64 hex char) hash
+        assert_eq!(hash, hash_text(text)); // Same input produces same hash
+    }
+
+    #[test]
+    fn test_generate_keypair() {
+        let result = generate_keypair();
+        assert!(result.is_ok());
+        
+        let (private_key, public_key) = result.unwrap();
+        assert!(!private_key.is_empty());
+        assert!(!public_key.is_empty());
+        
+        // Check base64 encoding validity
+        assert!(base64::decode(&private_key).is_ok());
+        assert!(base64::decode(&public_key).is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_sign_and_verify_document() {
+        let content = "This is a test document.";
+        let (private_key_b64, public_key_b64) = generate_keypair().unwrap();
+        let private_key_bytes = base64::decode(&private_key_b64).unwrap();
+        
+        // Test signing
+        let signature_result = sign_document(content.to_string(), private_key_bytes).await;
+        assert!(signature_result.is_ok());
+        
+        let signature = signature_result.unwrap();
+        
+        // Test verification
+        let verification_result = verify_signature(
+            content.to_string(),
+            signature,
+            public_key_b64
+        );
+        assert!(verification_result.is_ok());
+        assert!(verification_result.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_sign_document_validation() {
+        // Test empty content
+        let result = sign_document("".to_string(), vec![0; 32]).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Content cannot be empty"));
+        
+        // Test invalid key length
+        let result = sign_document("test".to_string(), vec![0; 10]).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Invalid private key length"));
+    }
+
+    #[test]
+    fn test_verify_signature_validation() {
+        // Test empty content
+        let result = verify_signature("".to_string(), "sig".to_string(), "key".to_string());
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Content cannot be empty"));
+        
+        // Test invalid base64
+        let result = verify_signature("test".to_string(), "invalid_base64!".to_string(), "key".to_string());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_provenance_event_serialization() {
+        let event = ProvenanceEvent {
+            timestamp: "2023-01-01T00:00:00Z".to_string(),
+            event_type: "human".to_string(),
+            text_hash: "test_hash".to_string(),
+            source: "user".to_string(),
+            span_length: 10,
+        };
+        
+        let json = serde_json::to_string(&event);
+        assert!(json.is_ok());
+        
+        let deserialized: Result<ProvenanceEvent, _> = serde_json::from_str(&json.unwrap());
+        assert!(deserialized.is_ok());
+        
+        let deserialized_event = deserialized.unwrap();
+        assert_eq!(event.timestamp, deserialized_event.timestamp);
+        assert_eq!(event.event_type, deserialized_event.event_type);
+    }
 }
