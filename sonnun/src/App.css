@@ -1,0 +1,190 @@
+:root {
+  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+
+  color: #0f0f0f;
+  background-color: #f6f6f6;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 1rem 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.app-header h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.header-tools {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-legend {
+  font-size: 0.875rem;
+}
+
+.app-main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.editor-pane {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+  background-color: #ffffff;
+}
+
+.editor-pane h2 {
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.editor-content {
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 1rem;
+  min-height: 400px;
+  background-color: #fafafa;
+}
+
+/* AIDEV-NOTE: Provenance visual indicators for content attribution */
+.provenance-human {
+  background-color: rgba(76, 175, 80, 0.1);
+  border-left: 3px solid #4CAF50;
+}
+
+.provenance-ai {
+  background-color: rgba(33, 150, 243, 0.1);
+  border-left: 3px solid #2196F3;
+}
+
+.provenance-cited {
+  background-color: rgba(255, 152, 0, 0.1);
+  border-left: 3px solid #FF9800;
+}
+
+/* Component-specific styles */
+.main-editor {
+  flex: 1;
+}
+
+.assistant-panel {
+  width: 400px;
+  background-color: #f8f9fa;
+  border-left: 1px solid #e0e0e0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.assistant-panel.closed {
+  width: 60px;
+}
+
+/* Button styles */
+.btn-primary {
+  background-color: #2196F3;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.btn-primary:hover {
+  background-color: #1976D2;
+}
+
+.btn-secondary {
+  background-color: #f5f5f5;
+  color: #333;
+  border: 1px solid #ddd;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.btn-secondary:hover {
+  background-color: #e8e8e8;
+}
+
+.btn-small {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color: #f6f6f6;
+    background-color: #1a1a1a;
+  }
+
+  .app-header {
+    background-color: #2a2a2a;
+    border-bottom-color: #444;
+  }
+
+  .app-header h1 {
+    color: #f6f6f6;
+  }
+
+  .editor-pane {
+    background-color: #1a1a1a;
+  }
+
+  .editor-pane h2,
+  .editor-content {
+    background-color: #2a2a2a;
+    border-color: #444;
+  }
+
+  .assistant-panel {
+    background-color: #242424;
+    border-left-color: #444;
+  }
+
+  .btn-secondary {
+    background-color: #444;
+    color: #f6f6f6;
+    border-color: #666;
+  }
+
+  .btn-secondary:hover {
+    background-color: #555;
+  }
+}

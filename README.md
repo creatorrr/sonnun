@@ -1,88 +1,168 @@
-# Tauri App Template
+# Sonnun: Provably Honest Content Creation
 
-This is a template for building desktop applications with Tauri.
+> A desktop markdown editor that cryptographically proves content provenance - distinguishing human writing from AI assistance and external sources.
 
-## Requirements
+![Sonnun Logo](https://via.placeholder.com/800x200/007bff/ffffff?text=Sonnun+%E2%80%A2+Provably+Honest+Content)
 
-* Read the [Tauri setup guide][tauri-docs]
-* Latest version of [Node][nodejs]
-* [Yarn][yarn] package manager (alternatively, [npm][npm])
+## 🎯 Mission
 
-## Get Started
+Combat "AI slop" by making honest attribution easier than deception. Writers get a tool that transparently tracks content origins; readers get cryptographic proof of authorship.
 
-Create a new project using this template
+## ✨ Key Features
 
-Click the **[Use this template][generate]** button.
+- **🔍 Real-time Provenance Tracking** - Every text insertion logged with source attribution
+- **📋 Citation Enforcement** - Paste operations require source attribution via modal dialogs  
+- **👁️ Visual Indicators** - Different content types visually marked in the editor
+- **🔐 Cryptographic Signing** - Documents signed with ed25519 keys for integrity proof
+- **📊 Manifest Generation** - JSON reports showing exact percentages of human/AI/cited content
+- **✅ Verification Tools** - Standalone CLI verifier and web badge service
 
-## Features
+## 🏗️ Architecture
 
-### Tauri
-- This template uses the latest versions of [Tauri][tauri] features.
-- Build smaller, faster, and more secure desktop applications with a web frontend
-
-### Vite
-- [Vite][vite] is used to group all the source code of the renderer.
-- Work easily with Vue, Svelte, React, etc.
-
-### Typescript (optional)
-- The Latest [TypeScript][typescript] is used for all source code.
-- **Vite** supports TypeScript out of the box. However, it does not support type checking.
-
-**Note**: If you do not need a TypeScript, you can easily abandon it. To do this, You do not need to make any bundler configuration changes, etc. Just replace all `.ts` files with `.js` files. Additionally, it will be useful to delete TS-specific files, plug-ins and dependencies like `tsconfig.json`, `@typescript-eslint/*`, etc.
-
-### Web frameworks
-
-By default this template is configured with vanilla-ts.
-
-See [examples of different frameworks.][vite-templates]
-
-## How it works
-
-The template required a minimum dependencies. Only Tauri and Vite is used for building, nothing more.
-
-### Project Structure
-
-The structure of this template is very similar to the structure of a monorepo.
-
-- [`packages/src-tauri`][src-tauri] Tauri application source.
-- [`packages/src-renderer`][src-renderer] Web application source.
-
-### Start Development
-
-```bash
-yarn dev
+**Trust Chain:**
+```
+author laptop ──signs──► markdown.html + c2pa.json
+                 ▲                         │
+                 │                         ▼
+          private key (ed25519)   public key in profile bio
 ```
 
-The first time you run this command, it will take several minutes for the Rust package manager to download and build all the required packages. Since they are cached, subsequent builds will be much faster, as only your code will need rebuilding.
+**Tech Stack:**
+- **Frontend**: React, TypeScript, Tiptap editor
+- **Backend**: Rust, Tauri framework  
+- **Database**: SQLite with append-only event log
+- **AI**: OpenAI API integration
+- **Crypto**: ed25519 signatures, C2PA standard
 
-Once Rust has finished building, the webview will open and it should display your web app.
+## 🚀 Quick Start
 
-### App Publishing
+### Prerequisites
+- [Node.js](https://nodejs.org/) (latest LTS)
+- [Rust](https://rustup.rs/) (latest stable)
+- OpenAI API key
 
+### Setup
 ```bash
-yarn build
+# Clone the repository
+git clone https://github.com/your-org/sonnun.git
+cd sonnun
+
+# Install dependencies
+npm install
+
+# Set up environment
+export OPENAI_API_KEY="your-api-key-here"
+
+# Start development server
+npm run tauri dev
 ```
 
-This command will embed your web assets into a single binary with your Rust code. The binary itself will be located in `packages/src-tauri/target/release/[app name]`, and installers will be located in `packages/src-tauri/target/release/bundle/`.
+### First Run
+1. Generate cryptographic keys via the Key Manager in the sidebar
+2. Copy your public key to your profile bio: `prov-pk: ed25519:MCowBQYDK2VwAyEA...`
+3. Start writing! The app will track all content sources automatically
 
-Like the `yarn dev` command, the first time you run this, it will take some time to collect the Rust crates and build everything - but on subsequent runs it will only need to rebuild your code, which is much quicker.
+## 📖 Documentation
 
-## License
+- **[Implementation Guide](IMPLEMENTATION.md)** - Detailed step-by-step development plan
+- **[Project Plan](PROJECT-PLAN.md)** - High-level architecture and requirements
+- **[Developer Guide](CLAUDE.md)** - Coding standards and AI assistant workflow
 
-This project is licensed under the MIT License - see [LICENSE][license] for more information.
+## 🔧 Development Commands
 
-Copyright (c) 2021 Valmisson Grizorte.
+```bash
+# Development
+npm run tauri dev          # Start dev server with hot reload
+npm run dev               # Frontend-only development
 
+# Building
+npm run tauri build       # Build desktop app for current platform
+npm run build            # Build frontend only
 
-[tauri]: https://github.com/tauri-apps/tauri
-[tauri-docs]: https://tauri.studio/en/docs/getting-started/intro/#setting-up-your-environment
-[vite]: https://github.com/vitejs/vite
-[vite-templates]: https://github.com/vitejs/vite/tree/main/packages/create-vite
-[typescript]: https://github.com/microsoft/TypeScript
-[nodejs]: https://nodejs.org/
-[yarn]: https://yarnpkg.com/
-[npm]: https://www.npmjs.com/
-[license]: https://github.com/valmisson/tauri-app-template/blob/main/LICENSE
-[src-tauri]: https://github.com/valmisson/tauri-app-template/tree/main/packages/src-tauri
-[src-renderer]: https://github.com/valmisson/tauri-app-template/tree/main/packages/src-renderer
-[generate]: https://github.com/valmisson/tauri-app-template/generate
+# Backend (Rust)
+cd src-tauri
+cargo build              # Build Rust backend
+cargo build --bin sonnun-verify  # Build CLI verifier
+cargo test               # Run tests
+
+# Verification
+./target/debug/sonnun-verify document.html  # Verify signed document
+```
+
+## 🌟 Usage Example
+
+1. **Write Content**: Type naturally in the editor - all human input is tracked
+2. **Use AI Assistant**: Ask ChatGPT for help via the sidebar - AI content is marked automatically  
+3. **Cite External Sources**: Paste content triggers citation modal - sources are linked and tracked
+4. **Generate Manifest**: Click "Publish" to see provenance breakdown
+5. **Export & Sign**: Generate cryptographically signed HTML with embedded proof
+6. **Verify**: Use CLI tool or web service to verify document authenticity
+
+## 🔐 Content Attribution
+
+All text is categorized and tracked:
+
+```typescript
+if (event.agent === 'ai') ai_tokens += span_length;
+else if (event.agent === 'cited') cited_tokens += span_length;
+else human_tokens += span_length;
+```
+
+**Example Manifest:**
+```json
+{
+  "human_percentage": "70.2%",
+  "ai_percentage": "20.1%", 
+  "cited_percentage": "9.7%",
+  "total_tokens": 1247,
+  "signature": "cryptographic_proof...",
+  "public_key": "ed25519:MCowBQYDK2VwAyEA..."
+}
+```
+
+## 🛡️ Verification
+
+**For Readers:**
+```bash
+curl -s https://prove.dev/verify?url=https://blog.com/post.html | jq .result
+```
+
+**Public Key Distribution:**
+- Profile bio: `prov-pk: ed25519:MCowBQYDK2VwAyEA...`
+- Webfinger: `/.well-known/prov.json`
+- Badge verification with embedded pubkey hash
+
+## 🗺️ Roadmap
+
+- [x] **Phase 1**: Basic editor with AI integration
+- [x] **Phase 2**: Provenance tracking and citation enforcement  
+- [x] **Phase 3**: Manifest generation and visual indicators
+- [x] **Phase 4**: Cryptographic signing and export
+- [ ] **Phase 5**: Standalone verification tools
+- [ ] **Phase 6**: Web badge service and distribution
+- [ ] **Phase 7**: Editor plugins (Obsidian, VS Code, Ghost)
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [development guide](CLAUDE.md) for coding standards and workflow.
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Commit your changes: `git commit -m 'Add amazing feature'`
+4. Push to branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- [Tauri](https://tauri.app/) for the excellent desktop app framework
+- [Tiptap](https://tiptap.dev/) for the extensible rich text editor
+- [OpenAI](https://openai.com/) for AI integration capabilities
+- The content provenance research community
+
+---
+
+**"Making honesty cheaper than fraud, one document at a time."**
