@@ -1,0 +1,37 @@
+{
+  "name": "tauri-app-template",
+  "version": "0.1.0",
+  "description": "A template for building desktop applications with Tauri",
+  "author": "Valmisson Grizorte <valmisson.github.io>",
+  "private": true,
+  "license": "MIT",
+  "workspaces": [
+    "packages/src-tauri",
+    "packages/src-renderer"
+  ],
+  "scripts": {
+    "dev": "cd packages && tauri dev",
+    "build": "cd packages && tauri build",
+    "dev:renderer": "cd packages/src-renderer && yarn dev",
+    "build:renderer": "cd packages/src-renderer && yarn build",
+    "lint": "cd packages/src-renderer && yarn lint",
+    "icons": "cd packages && tauri icon src-tauri/app-icon.png",
+    "tauri": "cd packages && tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^1.6.2",
+    "lint-staged": "^15.2.10",
+    "yorkie": "^2.0.0"
+  },
+  "gitHooks": {
+    "pre-commit": "lint-staged"
+  },
+  "lint-staged": {
+    "packages/src-renderer/src/**/*.{js,ts}": [
+      "yarn lint --fix"
+    ]
+  },
+  "engines": {
+    "node": ">=14.16.x"
+  }
+}
