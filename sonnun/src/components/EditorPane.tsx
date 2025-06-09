@@ -1,17 +1,34 @@
-import React, { useState, useCallback, useImperativeHandle, forwardRef } from 'react'
-import { useEditor, EditorContent } from '@tiptap/react'
+import React, { useState, useCallback, useImperativeHandle, forwardRef, useRef, useEffect } from 'react'
+import { useEditor, EditorContent, Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
+import Link from '@tiptap/extension-link'
 import { Extension } from '@tiptap/core'
+import { ProvenanceMark } from '../extensions/ProvenanceMark'
 import { Plugin, PluginKey } from 'prosemirror-state'
 import { invoke } from '@tauri-apps/api/tauri'
-import { ProvenanceMark } from '../extensions/ProvenanceMark'
 import CitationModal from './CitationModal'
 
 interface EditorPaneProps {
   onContentChange?: (content: string) => void
   onProvenanceChange?: (stats: ProvenanceStats) => void
   className?: string
+  onReady?: (editor: Editor, setSkipFlag: () => void) => void; // Added onReady prop
 }
+
+// Helper function for Step 3
+const findInsertedText = (oldText: string, newText: string): string => {
+  let start = 0;
+  while (start < oldText.length && start < newText.length && oldText[start] === newText[start]) {
+    start++;
+  }
+  let oldEnd = oldText.length - 1;
+  let newEnd = newText.length - 1;
+  while (oldEnd >= start && newEnd >= start && oldText[oldEnd] === newText[newEnd]) {
+    oldEnd--;
+    newEnd--;
+  }
+  return newText.slice(start, newEnd + 1);
+};
 
 interface ProvenanceStats {
   humanPercentage: number
@@ -32,8 +49,12 @@ const EditorPane = forwardRef<
 >(({ 
   onContentChange, 
   onProvenanceChange, 
-  className = '' 
+  className = '',
+  onReady // Destructure onReady
 }, ref) => {
+  const lastContentRef = useRef<string>('');
+  const skipNextUpdateRef = useRef<boolean>(false);
+
   const [citationModal, setCitationModal] = useState<CitationModalState>({
     isOpen: false,
     pastedText: ''
@@ -49,6 +70,7 @@ const EditorPane = forwardRef<
     doc.descendants((node: any) => {
       if (node.marks) {
         node.marks.forEach((mark: any) => {
+          // Reverted to 'provenanceMark' to match the existing extension's name
           if (mark.type.name === 'provenanceMark') {
             const text = node.textContent
             switch (mark.attrs.type) {
@@ -103,6 +125,7 @@ const EditorPane = forwardRef<
         dropcursor: false
       }),
       ProvenanceMark,
+      Link,
       // AIDEV-NOTE: Security critical - intercepts ALL paste ops to enforce citation req (>50 chars)
       Extension.create({
         name: 'pasteHandler',
@@ -115,7 +138,7 @@ const EditorPane = forwardRef<
                   const text = event.clipboardData?.getData('text/plain')
                   
                   // AIDEV-NOTE: UX decision point - 50 char threshold triggers citation modal
-                  if (text && text.length > 50) {
+                  if (text && text.length > 10) {
                     event.preventDefault()
                     setCitationModal({
                       isOpen: true,
@@ -126,7 +149,7 @@ const EditorPane = forwardRef<
                   }
                   
                   // Small pastes default to human content
-                  if (text && text.length <= 50) {
+                  if (text && text.length <= 10) {
                     logProvenanceEvent('human', text, 'user', text.length)
                   }
                   
@@ -155,39 +178,98 @@ const EditorPane = forwardRef<
     }
   })
 
-  // AIDEV-NOTE: Data flow - converts citation form data to ProvenanceMark with source attribution
-  const handleCitationSubmit = useCallback((citation: any) => {
-    if (!editor || !citationModal.pastedText) return
+  // Plan Step 2: Create handleCitationConfirm function (renamed from handleCitationSubmit):
+  useEffect(() => {
+    if (editor) {
+      // Initialize lastContentRef with current editor text
+      lastContentRef.current = editor.getText();
 
-    // Insert text with citation provenance mark
-    editor.commands.insertContent({
-      type: 'text',
-      text: citationModal.pastedText,
-      marks: [
-        {
-          type: 'provenanceMark',
-          attrs: {
-            source: citation.source,
-            type: 'cited'
+      const handleEditorUpdate = () => {
+        if (!editor) return;
+
+        if (skipNextUpdateRef.current) {
+          skipNextUpdateRef.current = false;
+          lastContentRef.current = editor.getText();
+          // console.log('Skipped update for logging human input');
+          return;
+        }
+
+        const currentText = editor.getText();
+        const lastText = lastContentRef.current;
+
+        if (currentText.length > lastText.length) {
+          const insertedText = findInsertedText(lastText, currentText);
+          if (insertedText.trim().length > 0) {
+            // console.log('Human typed:', insertedText);
+            logProvenanceEvent('human', insertedText, 'user', insertedText.length);
           }
         }
-      ]
-    })
+        lastContentRef.current = currentText;
+      };
 
-    // Log the provenance event
+      editor.on('update', handleEditorUpdate);
+
+      // Call onReady if provided
+      if (onReady) {
+        onReady(editor, () => {
+          skipNextUpdateRef.current = true;
+          // console.log('Skip next update flag set via onReady');
+        });
+      }
+
+      return () => {
+        editor.off('update', handleEditorUpdate);
+      };
+    }
+  }, [editor, onReady, logProvenanceEvent]); // Added dependencies
+
+  const handleCitationConfirm = useCallback((citation: string) => { // Signature changed to citation: string
+    if (!editor || !citationModal.pastedText) return
+
+    skipNextUpdateRef.current = true; // Skip logging for this programmatic insertion
+
+    const { pastedText, insertPosition } = citationModal;
+    const currentPosition = editor.state.selection.from;
+    const resolvedInsertPos = insertPosition !== undefined ? insertPosition : currentPosition;
+
+    // Insert content with provenance mark
+    // For compatibility with existing `calculateProvenanceStats`, we ensure `type: 'cited'` is set.
+    editor.chain().focus().insertContentAt(resolvedInsertPos, pastedText, {
+        marks: [
+            { type: editor.schema.marks.provenanceMark ? 'provenanceMark' : ProvenanceMark.name, attrs: { source: citation, type: 'cited' } }
+        ]
+    }).run();
+
+    const isURL = /^(ftp|http|https):\/\/[^ "]+$/.test(citation);
+    const insertedTextStartPos = resolvedInsertPos;
+    const insertedTextEndPos = resolvedInsertPos + pastedText.length;
+
+    if (isURL) {
+      editor.chain().focus()
+        .setTextSelection({ from: insertedTextStartPos, to: insertedTextEndPos })
+        .setLink({ href: citation })
+        // Move cursor to the end of the linked text
+        .setTextSelection({ from: insertedTextEndPos, to: insertedTextEndPos })
+        .run();
+    } else {
+      // If not a URL, insert ` (source: \${citation})` after the pasted content.
+      editor.chain().focus().insertContentAt(insertedTextEndPos, ` (source: ${citation})`).run();
+    }
+
     logProvenanceEvent(
-      'cited', 
-      citationModal.pastedText, 
-      citation.source, 
-      citationModal.pastedText.length
-    )
+      'cited',
+      pastedText,
+      citation,
+      pastedText.length
+    );
 
-    setCitationModal({ isOpen: false, pastedText: '' })
-  }, [editor, citationModal.pastedText, logProvenanceEvent])
+    setCitationModal({ isOpen: false, pastedText: '', insertPosition: undefined });
+  }, [editor, citationModal, logProvenanceEvent, ProvenanceMark.name]);
 
+  // Plan Step 2: Create handleCitationCancel function:
   const handleCitationCancel = useCallback(() => {
-    setCitationModal({ isOpen: false, pastedText: '' })
-  }, [])
+    setCitationModal({ isOpen: false, pastedText: '', insertPosition: undefined });
+  }, []);
 
   // AIDEV-NOTE: AI integration point - marks all AI content with model name for transparency
   const insertAIContent = useCallback((content: string, model: string) => {
@@ -244,8 +326,8 @@ const EditorPane = forwardRef<
 
       <CitationModal
         isOpen={citationModal.isOpen}
-        onClose={handleCitationCancel}
-        onSubmit={handleCitationSubmit}
+        onCancel={handleCitationCancel}
+        onConfirm={handleCitationConfirm}
         pastedText={citationModal.pastedText}
       />
     </div>

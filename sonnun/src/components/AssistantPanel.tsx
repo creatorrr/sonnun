@@ -6,6 +6,7 @@ interface AssistantPanelProps {
   isOpen: boolean
   onToggle: () => void
   className?: string
+  skipNextUpdate?: () => void // Added skipNextUpdate prop
 }
 
 interface Message {
@@ -32,7 +33,8 @@ const AssistantPanel: React.FC<AssistantPanelProps> = ({
   onInsertText, 
   isOpen, 
   onToggle, 
-  className = '' 
+  className = '',
+  skipNextUpdate // Destructure skipNextUpdate
 }) => {
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
@@ -110,9 +112,10 @@ const AssistantPanel: React.FC<AssistantPanelProps> = ({
   const handleInsertResponse = useCallback((message: Message) => {
     if (message.role === 'assistant') {
       const model = message.model || selectedModel
+      skipNextUpdate?.(); // Call skipNextUpdate before inserting text
       onInsertText(message.content, model)
     }
-  }, [onInsertText, selectedModel])
+  }, [onInsertText, selectedModel, skipNextUpdate]) // Added skipNextUpdate to dependencies
 
   const handleClearChat = useCallback(() => {
     setMessages([])
