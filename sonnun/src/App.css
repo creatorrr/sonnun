@@ -81,6 +81,7 @@
 }
 
 /* AIDEV-NOTE: Provenance visual indicators for content attribution */
+/* AIDEV-TODO: Add transition animations for better UX when content type changes */
 .provenance-human {
   background-color: rgba(76, 175, 80, 0.1);
   border-left: 3px solid #4CAF50;
@@ -162,6 +163,7 @@
   max-height: 100px;
   overflow-y: auto;
   /* border-left: 3px solid #FF9800; -- Removed as per simpler plan */
+  /* AIDEV-TODO: Add text-overflow: ellipsis for better handling of long lines */
 }
 
 .form-group {

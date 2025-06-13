@@ -7,6 +7,7 @@ interface CitationModalProps {
   onCancel: () => void
 }
 
+// AIDEV-NOTE: Simple modal for citation enforcement - replaced complex multi-field form
 const CitationModal: React.FC<CitationModalProps> = ({
   isOpen,
   pastedText,
@@ -19,6 +20,7 @@ const CitationModal: React.FC<CitationModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    // AIDEV-TODO: Add URL validation before confirming
     if (citation.trim()) {
       onConfirm(citation.trim())
       setCitation('')
@@ -30,12 +32,14 @@ const CitationModal: React.FC<CitationModalProps> = ({
       <div className="modal-content">
         <h3>Citation Required</h3>
         <p>You pasted content that needs a source citation:</p>
+        {/* AIDEV-NOTE: Preview limited to 200 chars for UI consistency */}
         <div className="pasted-preview">
           {pastedText.substring(0, 200)}
           {pastedText.length > 200 && '...'}
         </div>
 
         <form onSubmit={handleSubmit}>
+          {/* AIDEV-TODO: Add accessibility labels and ARIA attributes */}
           <input
             type="text"
             value={citation}

@@ -20,6 +20,7 @@ const App: React.FC = () => {
     totalCharacters: 0
   })
   const [isAssistantOpen, setIsAssistantOpen] = useState(true)
+  // AIDEV-TODO: Consider using context or state management lib for complex component communication
   const skipEditorUpdateFunctionRef = useRef<(() => void) | null>(null); // Added for Step 3
   
   // AIDEV-NOTE: Component communication - allows AssistantPanel to insert AI content into editor
@@ -50,6 +51,7 @@ const App: React.FC = () => {
           className="main-editor"
           onReady={(_editor, setSkipFlag) => { // Added onReady for Step 3
             // _editor can be used if App.tsx needs direct editor access, not currently planned.
+            // AIDEV-QUESTION: Should we validate setSkipFlag function before storing?
             skipEditorUpdateFunctionRef.current = setSkipFlag;
           }}
         />

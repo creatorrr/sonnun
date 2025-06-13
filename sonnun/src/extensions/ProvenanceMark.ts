@@ -15,6 +15,7 @@ declare module '@tiptap/core' {
 }
 
 // AIDEV-NOTE: Core extension - renders invisible provenance metadata as data attributes on spans
+// AIDEV-QUESTION: Should we add timestamp to provenance data for audit trails?
 export const ProvenanceMark = Mark.create<ProvenanceMarkOptions>({
   name: 'provenanceMark',
 
@@ -40,6 +41,7 @@ export const ProvenanceMark = Mark.create<ProvenanceMarkOptions>({
       },
       type: {
         default: 'human',
+        // AIDEV-TODO: Add validation to ensure type is one of: 'human', 'ai', 'cited'
         parseHTML: element => element.getAttribute('data-type'),
         renderHTML: attributes => {
           if (!attributes.type) {
@@ -62,6 +64,7 @@ export const ProvenanceMark = Mark.create<ProvenanceMarkOptions>({
   },
 
   renderHTML({ HTMLAttributes }) {
+    // AIDEV-NOTE: HTML5 data attributes enable CSS styling and JS access
     return [
       'span',
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {

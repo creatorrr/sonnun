@@ -16,6 +16,7 @@ interface EditorPaneProps {
 }
 
 // Helper function for Step 3
+// AIDEV-NOTE: perf-sensitive - runs on every keystroke, optimize for large docs
 const findInsertedText = (oldText: string, newText: string): string => {
   let start = 0;
   while (start < oldText.length && start < newText.length && oldText[start] === newText[start]) {
@@ -52,6 +53,7 @@ const EditorPane = forwardRef<
   className = '',
   onReady // Destructure onReady
 }, ref) => {
+  // AIDEV-TODO: Replace boolean flag with counter to handle overlapping async ops
   const lastContentRef = useRef<string>('');
   const skipNextUpdateRef = useRef<boolean>(false);
 
@@ -61,12 +63,14 @@ const EditorPane = forwardRef<
   })
 
   // AIDEV-NOTE: Core algorithm for calculating real-time provenance stats from Tiptap doc tree
+  // AIDEV-QUESTION: Should we cache stats calculation for large documents (>10k chars)?
   const calculateProvenanceStats = useCallback((editor: any): ProvenanceStats => {
     const doc = editor.state.doc
     let humanChars = 0
     let aiChars = 0
     let citedChars = 0
 
+    // AIDEV-TODO: Add proper TypeScript types for node parameter
     doc.descendants((node: any) => {
       if (node.marks) {
         node.marks.forEach((mark: any) => {
@@ -138,6 +142,7 @@ const EditorPane = forwardRef<
                   const text = event.clipboardData?.getData('text/plain')
                   
                   // AIDEV-NOTE: UX decision point - 50 char threshold triggers citation modal
+                  // AIDEV-QUESTION: Should threshold be configurable? Current is 10 chars
                   if (text && text.length > 10) {
                     event.preventDefault()
                     setCitationModal({
@@ -183,10 +188,13 @@ const EditorPane = forwardRef<
     if (editor) {
       // Initialize lastContentRef with current editor text
       lastContentRef.current = editor.getText();
+      
+      // AIDEV-TODO: Add cleanup to prevent memory leaks on component unmount
 
       const handleEditorUpdate = () => {
         if (!editor) return;
 
+        // AIDEV-NOTE: Race condition risk - multiple async ops can interfere
         if (skipNextUpdateRef.current) {
           skipNextUpdateRef.current = false;
           lastContentRef.current = editor.getText();

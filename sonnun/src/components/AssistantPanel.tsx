@@ -7,6 +7,7 @@ interface AssistantPanelProps {
   onToggle: () => void
   className?: string
   skipNextUpdate?: () => void // Added skipNextUpdate prop
+  // AIDEV-QUESTION: Should we add a callback for when AI content is generated but not inserted?
 }
 
 interface Message {
@@ -79,6 +80,7 @@ const AssistantPanel: React.FC<AssistantPanelProps> = ({
         max_tokens: maxTokens
       }
 
+      // AIDEV-TODO: Add retry logic with exponential backoff for API failures
       const response: AIResponse = await invoke('query_ai_assistant', { 
         promptData 
       })
@@ -112,6 +114,7 @@ const AssistantPanel: React.FC<AssistantPanelProps> = ({
   const handleInsertResponse = useCallback((message: Message) => {
     if (message.role === 'assistant') {
       const model = message.model || selectedModel
+      // AIDEV-NOTE: Critical timing - must skip before insertion to prevent race condition
       skipNextUpdate?.(); // Call skipNextUpdate before inserting text
       onInsertText(message.content, model)
     }
