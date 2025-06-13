@@ -81,6 +81,7 @@
 }
 
 /* AIDEV-NOTE: Provenance visual indicators for content attribution */
+/* AIDEV-TODO: Add transition animations for better UX when content type changes */
 .provenance-human {
   background-color: rgba(76, 175, 80, 0.1);
   border-left: 3px solid #4CAF50;
@@ -136,6 +137,15 @@
   width: 90%;
   max-height: 80vh;
   overflow-y: auto;
+  padding: 24px; /* Adjusted from 2rem to 24px */
+}
+
+.citation-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e1e5e9;
+  border-radius: 6px;
+  margin: 12px 0;
 }
 
 .modal-description {
@@ -144,11 +154,16 @@
 }
 
 .pasted-preview {
-  background: #f5f5f5;
-  padding: 1rem;
+  background: #f8f9fa; /* Adjusted from #f5f5f5 */
+  padding: 12px; /* Adjusted from 1rem to 12px */
   border-radius: 4px;
-  margin-bottom: 1rem;
-  border-left: 3px solid #FF9800;
+  margin: 12px 0; /* Adjusted from margin-bottom: 1rem */
+  font-family: monospace;
+  font-size: 14px;
+  max-height: 100px;
+  overflow-y: auto;
+  /* border-left: 3px solid #FF9800; -- Removed as per simpler plan */
+  /* AIDEV-TODO: Add text-overflow: ellipsis for better handling of long lines */
 }
 
 .form-group {
@@ -175,9 +190,32 @@
 
 .modal-actions {
   display: flex;
-  gap: 1rem;
+  gap: 8px; /* Adjusted from 1rem to 8px */
   justify-content: flex-end;
-  margin-top: 1.5rem;
+  margin-top: 1.5rem; /* This can remain or be adjusted if needed, plan doesn't specify */
+}
+
+.cancel-btn {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.confirm-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.confirm-btn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
 }
 
 /* Assistant Panel styles */
