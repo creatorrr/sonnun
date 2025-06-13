@@ -5,7 +5,7 @@ import Link from '@tiptap/extension-link'
 import { Extension } from '@tiptap/core'
 import { ProvenanceMark } from '../extensions/ProvenanceMark'
 import { Plugin, PluginKey } from 'prosemirror-state'
-import { invoke } from '@tauri-apps/api/tauri'
+import { invoke } from '@tauri-apps/api/core'
 import CitationModal from './CitationModal'
 
 interface EditorPaneProps {
@@ -138,7 +138,7 @@ const EditorPane = forwardRef<
             new Plugin({
               key: new PluginKey('pasteHandler'),
               props: {
-                handlePaste(view: any, event: ClipboardEvent, slice: any) {
+                handlePaste(view: any, event: ClipboardEvent, _slice: any) {
                   const text = event.clipboardData?.getData('text/plain')
                   
                   // AIDEV-NOTE: UX decision point - 50 char threshold triggers citation modal

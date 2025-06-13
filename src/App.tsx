@@ -12,7 +12,6 @@ interface ProvenanceStats {
 }
 
 const App: React.FC = () => {
-  const [documentContent, setDocumentContent] = useState('')
   const [provenanceStats, setProvenanceStats] = useState<ProvenanceStats>({
     humanPercentage: 100,
     aiPercentage: 0,
@@ -46,7 +45,6 @@ const App: React.FC = () => {
       <main className="app-main">
         <EditorPane 
           ref={editorRef}
-          onContentChange={setDocumentContent}
           onProvenanceChange={setProvenanceStats}
           className="main-editor"
           onReady={(_editor, setSkipFlag) => { // Added onReady for Step 3

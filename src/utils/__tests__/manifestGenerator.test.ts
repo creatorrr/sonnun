@@ -13,7 +13,7 @@ import type { ProvenanceEvent, ManifestData } from '../manifestGenerator'
 // Mock DOM APIs for testing
 Object.defineProperty(global, 'DOMParser', {
   value: class MockDOMParser {
-    parseFromString(content: string, mimeType: string) {
+    parseFromString(content: string, _mimeType: string) {
       // Simple mock - in real tests you'd use jsdom
       return {
         body: {
@@ -38,7 +38,7 @@ Object.defineProperty(global, 'document', {
 Object.defineProperty(global, 'crypto', {
   value: {
     subtle: {
-      digest: async (algorithm: string, data: ArrayBuffer) => {
+      digest: async (_algorithm: string, data: ArrayBuffer) => {
         // Simple mock hash - in production use real crypto
         const text = new TextDecoder().decode(data)
         const hash = Buffer.from(text).toString('hex').substring(0, 64)

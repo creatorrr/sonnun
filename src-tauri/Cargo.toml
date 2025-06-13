@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
+default-run = "sonnun"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -31,6 +32,10 @@ rand = "0.8"
 base64 = "0.21"
 clap = "4.0"
 lazy_static = "1.4"
+
+[[bin]]
+name = "sonnun"
+path = "src/main.rs"
 
 [[bin]]
 name = "sonnun-verify"

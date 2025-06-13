@@ -127,6 +127,7 @@ export function validateProvenanceEvent(event: Partial<ProvenanceEvent>): string
 
 export function isValidManifest(manifest: any): manifest is ManifestData {
   return (
+    manifest !== null &&
     typeof manifest === 'object' &&
     typeof manifest.human_percentage === 'number' &&
     typeof manifest.ai_percentage === 'number' &&
