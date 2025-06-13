@@ -2,113 +2,57 @@ import React, { useState } from 'react'
 
 interface CitationModalProps {
   isOpen: boolean
-  onClose: () => void
-  onSubmit: (citation: CitationData) => void
   pastedText: string
+  onConfirm: (citation: string) => void
+  onCancel: () => void
 }
 
-interface CitationData {
-  source: string
-  url?: string
-  author?: string
-  date?: string
-}
-
-const CitationModal: React.FC<CitationModalProps> = ({ isOpen, onClose, onSubmit, pastedText }) => {
-  const [citation, setCitation] = useState<CitationData>({
-    source: '',
-    url: '',
-    author: '',
-    date: new Date().toISOString().split('T')[0],
-  })
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (citation.source.trim()) {
-      onSubmit(citation)
-      // Reset form
-      setCitation({
-        source: '',
-        url: '',
-        author: '',
-        date: new Date().toISOString().split('T')[0],
-      })
-    }
-  }
-
-  const handleCancel = () => {
-    // AIDEV-NOTE: Security decision - canceling citation rejects the paste entirely (no fallback)
-    onClose()
-  }
+// AIDEV-NOTE: Simple modal for citation enforcement - replaced complex multi-field form
+const CitationModal: React.FC<CitationModalProps> = ({
+  isOpen,
+  pastedText,
+  onConfirm,
+  onCancel
+}) => {
+  const [citation, setCitation] = useState('')
 
   if (!isOpen) return null
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    // AIDEV-TODO: Add URL validation before confirming
+    if (citation.trim()) {
+      onConfirm(citation.trim())
+      setCitation('')
+    }
+  }
+
   return (
-    <div className="modal-overlay" onClick={handleCancel}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <h2>Citation Required</h2>
-        <p className="modal-description">
-          Please provide source information for the pasted content:
-        </p>
-        
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <h3>Citation Required</h3>
+        <p>You pasted content that needs a source citation:</p>
+        {/* AIDEV-NOTE: Preview limited to 200 chars for UI consistency */}
         <div className="pasted-preview">
-          <strong>Pasted text:</strong>
-          <p>{pastedText.substring(0, 200)}{pastedText.length > 200 ? '...' : ''}</p>
+          {pastedText.substring(0, 200)}
+          {pastedText.length > 200 && '...'}
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="source">
-              Source <span className="required">*</span>
-            </label>
-            <input
-              id="source"
-              type="text"
-              value={citation.source}
-              onChange={(e) => setCitation({ ...citation, source: e.target.value })}
-              placeholder="e.g., Wikipedia, Research Paper Title"
-              required
-              autoFocus
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="url">URL</label>
-            <input
-              id="url"
-              type="url"
-              value={citation.url}
-              onChange={(e) => setCitation({ ...citation, url: e.target.value })}
-              placeholder="https://example.com/article"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="author">Author</label>
-            <input
-              id="author"
-              type="text"
-              value={citation.author}
-              onChange={(e) => setCitation({ ...citation, author: e.target.value })}
-              placeholder="John Doe"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="date">Date</label>
-            <input
-              id="date"
-              type="date"
-              value={citation.date}
-              onChange={(e) => setCitation({ ...citation, date: e.target.value })}
-            />
-          </div>
-
+          {/* AIDEV-TODO: Add accessibility labels and ARIA attributes */}
+          <input
+            type="text"
+            value={citation}
+            onChange={(e) => setCitation(e.target.value)}
+            placeholder="Enter URL or source description..."
+            className="citation-input"
+            autoFocus
+          />
           <div className="modal-actions">
-            <button type="button" onClick={handleCancel} className="btn-secondary">
-              Cancel (discard paste)
+            <button type="button" onClick={onCancel} className="cancel-btn">
+              Cancel
             </button>
-            <button type="submit" className="btn-primary">
+            <button type="submit" disabled={!citation.trim()} className="confirm-btn">
               Add Citation
             </button>
           </div>
