@@ -119,6 +119,15 @@ else human_tokens += span_length;
   "public_key": "ed25519:MCowBQYDK2VwAyEA..."
 }
 ```
+### Programmatic Manifest Generation
+
+```typescript
+import { generateCompleteManifest } from "./src/utils/manifestGenerator"
+
+const manifest = await generateCompleteManifest(html, events)
+console.log(manifest)
+```
+
 
 ## 🛡️ Verification
 
