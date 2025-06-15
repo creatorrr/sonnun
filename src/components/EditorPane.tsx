@@ -7,6 +7,7 @@ import { ProvenanceMark } from '../extensions/ProvenanceMark'
 import { Plugin, PluginKey } from 'prosemirror-state'
 import { invoke } from '@tauri-apps/api/core'
 import CitationModal from './CitationModal'
+import { diffChars } from 'diff'
 
 interface EditorPaneProps {
   onContentChange?: (content: string) => void
@@ -16,20 +17,15 @@ interface EditorPaneProps {
 }
 
 // Helper function for Step 3
-// AIDEV-NOTE: perf-sensitive - runs on every keystroke, optimize for large docs
+// AIDEV-NOTE: perf-sensitive - diff new vs old to detect human input
 const findInsertedText = (oldText: string, newText: string): string => {
-  let start = 0;
-  while (start < oldText.length && start < newText.length && oldText[start] === newText[start]) {
-    start++;
-  }
-  let oldEnd = oldText.length - 1;
-  let newEnd = newText.length - 1;
-  while (oldEnd >= start && newEnd >= start && oldText[oldEnd] === newText[newEnd]) {
-    oldEnd--;
-    newEnd--;
-  }
-  return newText.slice(start, newEnd + 1);
-};
+  const diff = diffChars(oldText, newText)
+  let inserted = ''
+  diff.forEach(part => {
+    if (part.added) inserted += part.value
+  })
+  return inserted
+}
 
 interface ProvenanceStats {
   humanPercentage: number
@@ -53,9 +49,9 @@ const EditorPane = forwardRef<
   className = '',
   onReady // Destructure onReady
 }, ref) => {
-  // AIDEV-TODO: Replace boolean flag with counter to handle overlapping async ops
+  // AIDEV-NOTE: Counter handles overlapping async insertions
   const lastContentRef = useRef<string>('');
-  const skipNextUpdateRef = useRef<boolean>(false);
+  const skipUpdateCountRef = useRef<number>(0);
 
   const [citationModal, setCitationModal] = useState<CitationModalState>({
     isOpen: false,
@@ -195,8 +191,8 @@ const EditorPane = forwardRef<
         if (!editor) return;
 
         // AIDEV-NOTE: Race condition risk - multiple async ops can interfere
-        if (skipNextUpdateRef.current) {
-          skipNextUpdateRef.current = false;
+        if (skipUpdateCountRef.current > 0) {
+          skipUpdateCountRef.current -= 1;
           lastContentRef.current = editor.getText();
           // console.log('Skipped update for logging human input');
           return;
@@ -219,10 +215,10 @@ const EditorPane = forwardRef<
 
       // Call onReady if provided
       if (onReady) {
-        onReady(editor, () => {
-          skipNextUpdateRef.current = true;
-          // console.log('Skip next update flag set via onReady');
-        });
+          onReady(editor, () => {
+            skipUpdateCountRef.current += 1;
+            // console.log('Skip next update flag set via onReady');
+          });
       }
 
       return () => {
@@ -234,7 +230,7 @@ const EditorPane = forwardRef<
   const handleCitationConfirm = useCallback((citation: string) => { // Signature changed to citation: string
     if (!editor || !citationModal.pastedText) return
 
-    skipNextUpdateRef.current = true; // Skip logging for this programmatic insertion
+    skipUpdateCountRef.current += 1; // Skip logging for this programmatic insertion
 
     const { pastedText, insertPosition } = citationModal;
     const currentPosition = editor.state.selection.from;
