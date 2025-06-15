@@ -20,32 +20,45 @@ Object.defineProperty(global, 'DOMParser', {
           textContent: content.replace(/<[^>]*>/g, ''), // Strip HTML tags
           querySelectorAll: () => [],
           hasAttribute: () => false
+        },
+        createTreeWalker: () => {
+          let used = false
+          return {
+            nextNode: () => {
+              if (used || !content) return null
+              used = true
+              return {
+                nodeType: Node.TEXT_NODE,
+                textContent: content,
+                parentElement: { hasAttribute: () => false }
+              }
+            }
+          }
         }
       }
     }
   }
 })
 
-Object.defineProperty(global, 'document', {
-  value: {
-    createTreeWalker: () => ({
-      nextNode: () => null
-    })
-  }
+Object.defineProperty(global, 'NodeFilter', {
+  value: { SHOW_ALL: 0 }
 })
 
-// Provide minimal NodeFilter implementation for tests
-;(global as any).NodeFilter = { SHOW_ALL: 0 }
+// Provide minimal Node constants used in manifestGenerator
+Object.defineProperty(global, 'Node', {
+  value: { ELEMENT_NODE: 1, TEXT_NODE: 3 }
+})
 
 // Mock crypto.subtle for Node.js environment
 Object.defineProperty(global, 'crypto', {
   value: {
     subtle: {
       digest: async (_algorithm: string, data: ArrayBuffer) => {
-        // Simple mock hash - in production use real crypto
+        // Use Node's crypto module to generate a deterministic hash
+        const { createHash } = require('crypto')
         const text = new TextDecoder().decode(data)
-        const hash = Buffer.from(text).toString('hex').substring(0, 64)
-        return Buffer.from(hash, 'hex').buffer
+        const buf = createHash('sha256').update(text).digest()
+        return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)
       }
     }
   }
