@@ -905,15 +905,15 @@ import { useEffect, useRef } from 'react'
 
 const EditorPane: React.FC<EditorPaneProps> = ({ onReady }) => {
   const lastContentRef = useRef('')
-  const skipNextUpdateRef = useRef(false)
+  const skipUpdateCountRef = useRef(0)
 
   useEffect(() => {
     if (!editor) return
 
     const handleUpdate = ({ editor: currentEditor }) => {
       // Skip logging if this was a programmatic insertion (AI or citation)
-      if (skipNextUpdateRef.current) {
-        skipNextUpdateRef.current = false
+      if (skipUpdateCountRef.current > 0) {
+        skipUpdateCountRef.current -= 1
         lastContentRef.current = currentEditor.getText()
         return
       }
@@ -943,27 +943,19 @@ const EditorPane: React.FC<EditorPaneProps> = ({ onReady }) => {
 
   // Helper function to find inserted text
   const findInsertedText = (oldText: string, newText: string): string => {
-    // Simple diff algorithm - find the common prefix and suffix
-    let start = 0
-    while (start < oldText.length && start < newText.length && oldText[start] === newText[start]) {
-      start++
-    }
-
-    let oldEnd = oldText.length - 1
-    let newEnd = newText.length - 1
-    while (oldEnd >= start && newEnd >= start && oldText[oldEnd] === newText[newEnd]) {
-      oldEnd--
-      newEnd--
-    }
-
-    return newText.slice(start, newEnd + 1)
+    const diff = diffChars(oldText, newText)
+    let inserted = ''
+    diff.forEach(part => {
+      if (part.added) inserted += part.value
+    })
+    return inserted
   }
 
   // Update citation confirm to skip next update
   const handleCitationConfirm = async (citation: string) => {
     if (!editor || !pendingPaste) return
 
-    skipNextUpdateRef.current = true // Skip logging this insertion
+    skipUpdateCountRef.current += 1 // Skip logging this insertion
     
     // ... rest of existing code
   }
@@ -992,7 +984,7 @@ const AssistantPanel: React.FC<AssistantPanelProps> = ({ onInsertText, skipNextU
 
 **Update**: `src/App.tsx` to pass skip function
 ```tsx
-const skipNextUpdateRef = useRef<() => void>()
+const skipUpdateCountRef = useRef(0)
 
 const handleInsertText = (text: string) => {
   if (editorInstance) {
@@ -1009,14 +1001,12 @@ const handleInsertText = (text: string) => {
 // In JSX
 <EditorPane onReady={(editor) => {
   setEditorInstance(editor)
-  skipNextUpdateRef.current = () => {
-    // This function will be called to skip the next update
-  }
+  skipUpdateCountRef.current += 1 // Skip next provenance update
 }} />
 
 <AssistantPanel 
   onInsertText={handleInsertText} 
-  skipNextUpdate={skipNextUpdateRef.current}
+  skipNextUpdate={skipUpdateCountRef.current}
 />
 ```
 
@@ -1029,22 +1019,23 @@ const handleInsertText = (text: string) => {
 ### Step 4.1: Build Manifest Calculation Logic (90 min)
 **Create**: `src/utils/manifestGenerator.ts`
 ```typescript
-export interface ProvenanceManifest {
-  human_tokens: number
-  ai_tokens: number
-  cited_tokens: number
-  total_tokens: number
-  human_percentage: string
-  ai_percentage: string
-  cited_percentage: string
+export interface ManifestData {
+  human_percentage: number
+  ai_percentage: number
+  cited_percentage: number
+  total_characters: number
+  events: ProvenanceEvent[]
   generated_at: string
-  content_hash: string
+  document_hash: string
 }
 
-export function generateProvenanceManifest(html: string): ProvenanceManifest {
+export async function generateCompleteManifest(
+  content: string,
+  events: ProvenanceEvent[]
+): Promise<ManifestData> {
   // Create a temporary DOM element to parse the HTML
   const tempDiv = document.createElement('div')
-  tempDiv.innerHTML = html
+  tempDiv.innerHTML = content
 
   // Count total tokens
   const totalText = tempDiv.textContent || ''
@@ -1069,7 +1060,7 @@ export function generateProvenanceManifest(html: string): ProvenanceManifest {
   const citedPercentage = totalTokens > 0 ? ((citedTokens / totalTokens) * 100).toFixed(1) + '%' : '0%'
 
   // Generate content hash
-  const contentHash = generateContentHash(html)
+  const contentHash = generateContentHash(content)
 
   return {
     human_tokens: humanTokens,
@@ -1103,11 +1094,11 @@ async function generateContentHash(content: string): Promise<string> {
 **Create**: `src/components/ManifestModal.tsx`
 ```tsx
 import React from 'react'
-import { ProvenanceManifest } from '../utils/manifestGenerator'
+import { ManifestData } from '../utils/manifestGenerator'
 
 interface ManifestModalProps {
   isOpen: boolean
-  manifest: ProvenanceManifest | null
+  manifest: ManifestData | null
   onClose: () => void
   onExport?: () => void
 }
@@ -1278,12 +1269,12 @@ export default ManifestModal
 ### Step 4.3: Integrate Manifest Generation (45 min)
 **Update**: `src/App.tsx` with manifest functionality
 ```tsx
-import { generateProvenanceManifest, ProvenanceManifest } from './utils/manifestGenerator'
+import { generateCompleteManifest, ManifestData } from './utils/manifestGenerator'
 import ManifestModal from './components/ManifestModal'
 
 function App() {
   const [editorInstance, setEditorInstance] = useState(null)
-  const [manifestData, setManifestData] = useState<ProvenanceManifest | null>(null)
+  const [manifestData, setManifestData] = useState<ManifestData | null>(null)
   const [showManifest, setShowManifest] = useState(false)
 
   const handlePublish = async () => {
@@ -1291,7 +1282,7 @@ function App() {
     
     try {
       const html = editorInstance.getHTML()
-      const manifest = await generateProvenanceManifest(html)
+      const manifest = await generateCompleteManifest(html, events)
       setManifestData(manifest)
       setShowManifest(true)
     } catch (error) {
@@ -1449,7 +1440,7 @@ import ProvenanceLegend from './components/ProvenanceLegend'
   <h2>AI Assistant</h2>
   <AssistantPanel 
     onInsertText={handleInsertText} 
-    skipNextUpdate={skipNextUpdateRef.current}
+    skipNextUpdate={skipUpdateCountRef.current}
   />
   <ProvenanceLegend />
 </div>
@@ -1828,7 +1819,7 @@ const handleExport = async () => {
   <h2>AI Assistant</h2>
   <AssistantPanel 
     onInsertText={handleInsertText} 
-    skipNextUpdate={skipNextUpdateRef.current}
+    skipNextUpdate={skipUpdateCountRef.current}
   />
   <ProvenanceLegend />
   <KeyManager />

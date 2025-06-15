@@ -36,7 +36,7 @@ export function calculateProvenanceFromText(content: string): ProvenanceStats {
   let citedChars = 0
   
   // Walk through all text nodes and their provenance marks
-  const walker = document.createTreeWalker(
+  const walker = doc.createTreeWalker(
     doc.body,
     NodeFilter.SHOW_ALL,
     null

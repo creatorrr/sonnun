@@ -1,5 +1,8 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use tauri_plugin_sql::{Builder as SqlBuilder, Migration, MigrationKind};
+
 mod database;
 mod crypto_utils;
 pub use crypto_utils::{hash_text, sign_document, generate_keypair, verify_signature};
@@ -10,7 +13,7 @@ use database::Database;
 pub struct ProvenanceEvent {
     pub timestamp: String,
     pub event_type: String,  // "human", "ai", "cited"
-    pub text_hash: String,
+    pub text_hash: String,  // SHA-256 hash of inserted text
     pub source: String,
     pub span_length: usize,
 }
@@ -29,6 +32,8 @@ pub struct ManifestData {
     pub total_characters: usize,
     pub events: Vec<ProvenanceEvent>,
 }
+
+const DB_URL: &str = "sqlite:sonnun.db";
 
 #[derive(Debug, Deserialize)]
 pub struct AIPrompt {
@@ -50,18 +55,33 @@ pub fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
+// AIDEV-NOTE: Input struct for frontend - accepts plain text
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProvenanceEventInput {
+    pub timestamp: String,
+    pub event_type: String,
+    pub text: String,  // Plain text from frontend
+    pub source: String,
+    pub span_length: usize,
+}
+
 // AIDEV-NOTE: Write path - all editor changes flow through this function for audit trail
 #[tauri::command]
 pub async fn log_provenance_event(
-    event: ProvenanceEvent,
+    event: ProvenanceEventInput,
 ) -> Result<EventResponse, String> {
-    let db = Database::new();
-    let mut event_with_hash = event.clone();
+    let db = Database::new(DB_URL).await?;
     
-    // Generate proper text hash 
-    event_with_hash.text_hash = hash_text(&event.text_hash);
+    // Convert input to storage format with hashed text
+    let event_with_hash = ProvenanceEvent {
+        timestamp: event.timestamp,
+        event_type: event.event_type,
+        text_hash: hash_text(&event.text),  // Hash the plain text
+        source: event.source,
+        span_length: event.span_length,
+    };
     
-    db.insert_event(event_with_hash)
+    db.insert_event(event_with_hash).await
 }
 
 // AIDEV-NOTE: Read path - supports filtering by type/limit for manifest generation and UI
@@ -70,15 +90,15 @@ pub async fn get_event_history(
     limit: Option<u32>,
     event_type: Option<String>,
 ) -> Result<Vec<ProvenanceEvent>, String> {
-    let db = Database::new();
-    db.get_events(limit, event_type)
+    let db = Database::new(DB_URL).await?;
+    db.get_events(limit, event_type).await
 }
 
 // AIDEV-NOTE: Analytics engine - calculates percentages and stats for transparency reports
 #[tauri::command]
 pub async fn generate_manifest() -> Result<ManifestData, String> {
-    let db = Database::new();
-    db.generate_manifest()
+    let db = Database::new(DB_URL).await?;
+    db.generate_manifest().await
 }
 
 // AIDEV-NOTE: AI gateway - handles OpenAI API calls with proper error handling and attribution
@@ -146,10 +166,24 @@ pub async fn query_ai_assistant(
 }
 
 
+fn create_migrations() -> Vec<Migration> {
+    vec![Migration {
+        version: 1,
+        description: "create events table",
+        sql: "CREATE TABLE IF NOT EXISTS events (\n  id INTEGER PRIMARY KEY AUTOINCREMENT,\n  timestamp TEXT NOT NULL,\n  event_type TEXT NOT NULL,\n  text_hash TEXT NOT NULL,\n  source TEXT,\n  span_length INTEGER\n);",
+        kind: MigrationKind::Up,
+    }]
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(
+            SqlBuilder::default()
+                .add_migrations("sqlite:sonnun.db", create_migrations())
+                .build(),
+        )
         .invoke_handler(tauri::generate_handler![
             greet,
             log_provenance_event,
