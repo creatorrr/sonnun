@@ -28,10 +28,31 @@ Object.defineProperty(global, 'DOMParser', {
 
 Object.defineProperty(global, 'document', {
   value: {
-    createTreeWalker: () => ({
-      nextNode: () => null
-    })
+    createTreeWalker: (root: any) => {
+      let done = false
+      return {
+        nextNode: () => {
+          if (done || !root.textContent) return null
+          done = true
+          return {
+            nodeType: Node.TEXT_NODE,
+            textContent: root.textContent,
+            parentElement: root
+          }
+        }
+      }
+    }
   }
+})
+
+// Provide minimal NodeFilter implementation for tests
+Object.defineProperty(global, 'NodeFilter', {
+  value: { SHOW_ALL: 0 }
+})
+
+// Provide minimal Node constants used in manifestGenerator
+Object.defineProperty(global, 'Node', {
+  value: { ELEMENT_NODE: 1, TEXT_NODE: 3 }
 })
 
 // Mock crypto.subtle for Node.js environment
@@ -39,10 +60,10 @@ Object.defineProperty(global, 'crypto', {
   value: {
     subtle: {
       digest: async (_algorithm: string, data: ArrayBuffer) => {
-        // Simple mock hash - in production use real crypto
-        const text = new TextDecoder().decode(data)
-        const hash = Buffer.from(text).toString('hex').substring(0, 64)
-        return Buffer.from(hash, 'hex').buffer
+        const { createHash } = require('crypto')
+        const buffer = Buffer.from(data)
+        const hash = createHash('sha256').update(buffer).digest()
+        return hash.buffer.slice(hash.byteOffset, hash.byteOffset + hash.byteLength)
       }
     }
   }
