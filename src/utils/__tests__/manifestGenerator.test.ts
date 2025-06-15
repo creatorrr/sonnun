@@ -20,24 +20,19 @@ Object.defineProperty(global, 'DOMParser', {
           textContent: content.replace(/<[^>]*>/g, ''), // Strip HTML tags
           querySelectorAll: () => [],
           hasAttribute: () => false
-        }
-      }
-    }
-  }
-})
-
-Object.defineProperty(global, 'document', {
-  value: {
-    createTreeWalker: (root: any) => {
-      let done = false
-      return {
-        nextNode: () => {
-          if (done || !root.textContent) return null
-          done = true
+        },
+        createTreeWalker: () => {
+          let used = false
           return {
-            nodeType: Node.TEXT_NODE,
-            textContent: root.textContent,
-            parentElement: root
+            nextNode: () => {
+              if (used || !content) return null
+              used = true
+              return {
+                nodeType: Node.TEXT_NODE,
+                textContent: content,
+                parentElement: { hasAttribute: () => false }
+              }
+            }
           }
         }
       }
@@ -45,7 +40,6 @@ Object.defineProperty(global, 'document', {
   }
 })
 
-// Provide minimal NodeFilter implementation for tests
 Object.defineProperty(global, 'NodeFilter', {
   value: { SHOW_ALL: 0 }
 })
@@ -60,10 +54,11 @@ Object.defineProperty(global, 'crypto', {
   value: {
     subtle: {
       digest: async (_algorithm: string, data: ArrayBuffer) => {
+        // Use Node's crypto module to generate a deterministic hash
         const { createHash } = require('crypto')
-        const buffer = Buffer.from(data)
-        const hash = createHash('sha256').update(buffer).digest()
-        return hash.buffer.slice(hash.byteOffset, hash.byteOffset + hash.byteLength)
+        const text = new TextDecoder().decode(data)
+        const buf = createHash('sha256').update(text).digest()
+        return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)
       }
     }
   }
