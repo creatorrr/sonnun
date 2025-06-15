@@ -44,6 +44,7 @@ Object.defineProperty(global, 'NodeFilter', {
   value: { SHOW_ALL: 0 }
 })
 
+// Provide minimal Node constants used in manifestGenerator
 Object.defineProperty(global, 'Node', {
   value: { ELEMENT_NODE: 1, TEXT_NODE: 3 }
 })
