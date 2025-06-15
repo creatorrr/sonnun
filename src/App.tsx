@@ -20,7 +20,7 @@ const App: React.FC = () => {
   })
   const [isAssistantOpen, setIsAssistantOpen] = useState(true)
   // AIDEV-TODO: Consider using context or state management lib for complex component communication
-  const skipEditorUpdateFunctionRef = useRef<(() => void) | null>(null); // Added for Step 3
+  const [skipEditorUpdateFunction, setSkipEditorUpdateFunction] = useState<(() => void) | null>(null)
   
   // AIDEV-NOTE: Component communication - allows AssistantPanel to insert AI content into editor
   const editorRef = useRef<{ insertAIContent: (content: string, model: string) => void } | null>(null)
@@ -28,10 +28,10 @@ const App: React.FC = () => {
   // AIDEV-NOTE: State orchestration - manages document content and provenance flow between components
   const handleInsertAIText = useCallback((content: string, model: string) => {
     if (editorRef.current?.insertAIContent) {
-      skipEditorUpdateFunctionRef.current?.(); // Call to set skip flag in EditorPane
+      skipEditorUpdateFunction?.() // Call to set skip flag in EditorPane
       editorRef.current.insertAIContent(content, model)
     }
-  }, []) // No new dependencies needed for skipEditorUpdateFunctionRef here, it's a ref.
+  }, [skipEditorUpdateFunction])
 
   return (
     <div className="app-container">
@@ -43,14 +43,13 @@ const App: React.FC = () => {
       </header>
       
       <main className="app-main">
-        <EditorPane 
+        <EditorPane
           ref={editorRef}
           onProvenanceChange={setProvenanceStats}
           className="main-editor"
-          onReady={(_editor, setSkipFlag) => { // Added onReady for Step 3
-            // _editor can be used if App.tsx needs direct editor access, not currently planned.
-            // AIDEV-QUESTION: Should we validate setSkipFlag function before storing?
-            skipEditorUpdateFunctionRef.current = setSkipFlag;
+          onReady={(_editor, setSkipFlag) => {
+            // Store the skip flag setter from EditorPane
+            setSkipEditorUpdateFunction(() => setSkipFlag)
           }}
         />
         
@@ -58,7 +57,7 @@ const App: React.FC = () => {
           onInsertText={handleInsertAIText}
           isOpen={isAssistantOpen}
           onToggle={() => setIsAssistantOpen(!isAssistantOpen)}
-          skipNextUpdate={skipEditorUpdateFunctionRef.current ?? undefined} // Added for Step 3
+          skipNextUpdate={skipEditorUpdateFunction ?? undefined}
         />
       </main>
     </div>
