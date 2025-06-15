@@ -11,6 +11,8 @@ import {
 import type { ProvenanceEvent, ManifestData } from '../manifestGenerator'
 
 // Mock DOM APIs for testing
+// Minimal DOM parser and tree walker stubs
+let lastContent = ''
 Object.defineProperty(global, 'DOMParser', {
   value: class MockDOMParser {
     parseFromString(content: string, _mimeType: string) {
@@ -40,11 +42,31 @@ Object.defineProperty(global, 'DOMParser', {
   }
 })
 
-Object.defineProperty(global, 'NodeFilter', {
-  value: { SHOW_ALL: 0 }
+
+Object.defineProperty(global, 'document', {
+  value: {
+    createTreeWalker: () => {
+      let done = false
+      return {
+        nextNode: () => {
+          if (done) return null
+          done = true
+          return {
+            nodeType: Node.TEXT_NODE,
+            textContent: lastContent,
+            parentElement: null
+          }
+        }
+      }
+    }
+  }
 })
 
-// Provide minimal Node constants used in manifestGenerator
+// Provide NodeFilter constant for createTreeWalker options
+Object.defineProperty(global, 'NodeFilter', {
+  value: { SHOW_ALL: 0xFFFFFFFF }
+})
+
 Object.defineProperty(global, 'Node', {
   value: { ELEMENT_NODE: 1, TEXT_NODE: 3 }
 })
@@ -54,11 +76,10 @@ Object.defineProperty(global, 'crypto', {
   value: {
     subtle: {
       digest: async (_algorithm: string, data: ArrayBuffer) => {
-        // Use Node's crypto module to generate a deterministic hash
-        const { createHash } = require('crypto')
-        const text = new TextDecoder().decode(data)
-        const buf = createHash('sha256').update(text).digest()
-        return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)
+        // Use Node's crypto module to generate a stable hash
+        const { createHash } = await import('crypto')
+        const buffer = Buffer.from(new Uint8Array(data))
+        return createHash('sha256').update(buffer).digest().buffer
       }
     }
   }
