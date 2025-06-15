@@ -7,12 +7,13 @@ import { ProvenanceMark } from '../extensions/ProvenanceMark'
 import { Plugin, PluginKey } from 'prosemirror-state'
 import { invoke } from '@tauri-apps/api/core'
 import CitationModal from './CitationModal'
+import type { ProvenanceStats } from '../utils/manifestGenerator'
 
 interface EditorPaneProps {
   onContentChange?: (content: string) => void
   onProvenanceChange?: (stats: ProvenanceStats) => void
   className?: string
-  onReady?: (editor: Editor, setSkipFlag: () => void) => void; // Added onReady prop
+  onReady?: (editor: Editor, setSkipFlag: () => void) => void
 }
 
 // Helper function for Step 3
@@ -30,13 +31,6 @@ const findInsertedText = (oldText: string, newText: string): string => {
   }
   return newText.slice(start, newEnd + 1);
 };
-
-interface ProvenanceStats {
-  humanPercentage: number
-  aiPercentage: number
-  citedPercentage: number
-  totalCharacters: number
-}
 
 interface CitationModalState {
   isOpen: boolean

@@ -16,17 +16,32 @@ let lastContent = ''
 Object.defineProperty(global, 'DOMParser', {
   value: class MockDOMParser {
     parseFromString(content: string, _mimeType: string) {
-      lastContent = content.replace(/<[^>]*>/g, '')
+      // Simple mock - in real tests you'd use jsdom
       return {
         body: {
-          textContent: lastContent,
+          textContent: content.replace(/<[^>]*>/g, ''), // Strip HTML tags
           querySelectorAll: () => [],
           hasAttribute: () => false
+        },
+        createTreeWalker: () => {
+          let used = false
+          return {
+            nextNode: () => {
+              if (used || !content) return null
+              used = true
+              return {
+                nodeType: Node.TEXT_NODE,
+                textContent: content,
+                parentElement: { hasAttribute: () => false }
+              }
+            }
+          }
         }
       }
     }
   }
 })
+
 
 Object.defineProperty(global, 'document', {
   value: {
