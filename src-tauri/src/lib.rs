@@ -4,6 +4,8 @@ use sha2::{Digest, Sha256};
 use tauri_plugin_sql::{Builder as SqlBuilder, Migration, MigrationKind};
 
 mod database;
+mod crypto_utils;
+pub use crypto_utils::{hash_text, sign_document, generate_keypair, verify_signature};
 use database::Database;
 
 // AIDEV-NOTE: Foundation types - these structs define the entire provenance data model
@@ -47,12 +49,6 @@ pub struct AIResponse {
     pub token_count: Option<u32>,
 }
 
-// AIDEV-NOTE: Security improvement - proper hash generation for provenance events
-pub fn hash_text(text: &str) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(text.as_bytes());
-    format!("{:x}", hasher.finalize())
-}
 
 #[tauri::command]
 pub fn greet(name: &str) -> String {
@@ -169,80 +165,6 @@ pub async fn query_ai_assistant(
     })
 }
 
-// AIDEV-NOTE: Security core - signs documents with ed25519 for tamper-proof verification
-#[tauri::command]
-pub async fn sign_document(
-    content: String,
-    private_key_bytes: Vec<u8>,
-) -> Result<String, String> {
-    use ed25519_dalek::{Signer, SigningKey};
-    
-    if content.is_empty() {
-        return Err("Content cannot be empty".to_string());
-    }
-    
-    // Parse private key
-    let signing_key = SigningKey::from_bytes(
-        &private_key_bytes.try_into()
-            .map_err(|_| "Invalid private key length")?
-    );
-    
-    // Create signature
-    let signature = signing_key.sign(content.as_bytes());
-    
-    // Return base64-encoded signature
-    Ok(base64::encode(signature.to_bytes()))
-}
-
-// AIDEV-NOTE: Key generation - creates cryptographically secure keypairs for document identity
-#[tauri::command]
-pub fn generate_keypair() -> Result<(String, String), String> {
-    use ed25519_dalek::{SigningKey, VerifyingKey};
-    use rand::rngs::OsRng;
-    
-    let mut csprng = OsRng {};
-    let signing_key = SigningKey::generate(&mut csprng);
-    let verifying_key: VerifyingKey = signing_key.verifying_key();
-    
-    let private_key = base64::encode(signing_key.to_bytes());
-    let public_key = base64::encode(verifying_key.to_bytes());
-    
-    Ok((private_key, public_key))
-}
-
-// AIDEV-NOTE: Verification endpoint - validates document authenticity using public key crypto
-#[tauri::command]
-pub fn verify_signature(
-    content: String,
-    signature_b64: String,
-    public_key_b64: String,
-) -> Result<bool, String> {
-    use ed25519_dalek::{Verifier, VerifyingKey, Signature};
-    
-    if content.is_empty() {
-        return Err("Content cannot be empty".to_string());
-    }
-    
-    let public_key_bytes = base64::decode(public_key_b64)
-        .map_err(|_| "Invalid public key encoding")?;
-    let signature_bytes = base64::decode(signature_b64)
-        .map_err(|_| "Invalid signature encoding")?;
-    
-    let verifying_key = VerifyingKey::from_bytes(
-        &public_key_bytes.try_into()
-            .map_err(|_| "Invalid public key length")?
-    ).map_err(|_| "Invalid public key format")?;
-    
-    let signature = Signature::from_bytes(
-        &signature_bytes.try_into()
-            .map_err(|_| "Invalid signature length")?
-    );
-    
-    match verifying_key.verify(content.as_bytes(), &signature) {
-        Ok(()) => Ok(true),
-        Err(_) => Ok(false),
-    }
-}
 
 fn create_migrations() -> Vec<Migration> {
     vec![Migration {
