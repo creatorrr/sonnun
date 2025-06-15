@@ -1,8 +1,8 @@
 use clap::{Arg, Command};
 use std::fs;
 use serde_json::Value;
-use ed25519_dalek::{PublicKey, Signature, Verifier};
-use base64::{engine::general_purpose, Engine as _};
+use ed25519_dalek::{VerifyingKey, Signature, Verifier};
+use regex::Regex;
 
 fn main() {
     let matches = Command::new("sonnun-verify")
@@ -50,30 +50,40 @@ struct VerificationResult {
     manifest: Value,
 }
 
+// AIDEV-NOTE: Document verification core - parses HTML, validates manifest, verifies crypto signature
 fn verify_document(filename: &str, provided_key: Option<&String>) -> Result<VerificationResult, String> {
     let content = fs::read_to_string(filename).map_err(|e| format!("Failed to read file: {}", e))?;
 
-    let manifest_start = content
-        .find(r#"<script type=\"application/json\" id=\"sonnun-manifest\">"#)
+    // AIDEV-NOTE: Robust HTML parsing - uses regex to handle whitespace/formatting variations
+    let manifest_regex = Regex::new(r#"<script[^>]*type="application/json"[^>]*id="sonnun-manifest"[^>]*>([\s\S]*?)</script>"#)
+        .map_err(|e| format!("Regex compilation error: {}", e))?;
+    
+    let captures = manifest_regex.captures(&content)
         .ok_or("No Sonnun manifest found in document")?;
-    let manifest_content_start = content[manifest_start..]
-        .find('>')
-        .ok_or("Malformed manifest script tag")?;
-    let manifest_content_end = content[manifest_start..]
-        .find("</script>")
-        .ok_or("Manifest script tag not closed")?;
-
-    let manifest_json = &content[manifest_start + manifest_content_start + 1..manifest_start + manifest_content_end];
-    let signed_manifest: Value = serde_json::from_str(manifest_json.trim())
+    
+    let manifest_json = captures.get(1)
+        .ok_or("Failed to extract manifest content")?
+        .as_str().trim();
+    
+    let signed_manifest: Value = serde_json::from_str(manifest_json)
         .map_err(|e| format!("Invalid manifest JSON: {}", e))?;
 
-    let manifest = signed_manifest["manifest"].clone();
-    let signature_b64 = signed_manifest["signature"]
-        .as_str()
-        .ok_or("No signature in manifest")?;
-    let public_key_b64 = signed_manifest["public_key"]
-        .as_str()
-        .ok_or("No public key in manifest")?;
+    // AIDEV-NOTE: Manifest validation - ensures required fields exist before access
+    if !signed_manifest.is_object() {
+        return Err("Manifest must be a JSON object".to_string());
+    }
+    
+    let manifest = signed_manifest.get("manifest")
+        .ok_or("Missing 'manifest' field in signed manifest")?
+        .clone();
+    
+    let signature_b64 = signed_manifest.get("signature")
+        .and_then(|v| v.as_str())
+        .ok_or("Missing or invalid 'signature' field in manifest")?;
+    
+    let public_key_b64 = signed_manifest.get("public_key")
+        .and_then(|v| v.as_str())
+        .ok_or("Missing or invalid 'public_key' field in manifest")?;
 
     if let Some(key) = provided_key {
         if key != public_key_b64 {
@@ -81,22 +91,26 @@ fn verify_document(filename: &str, provided_key: Option<&String>) -> Result<Veri
         }
     }
 
-    let public_key_bytes = general_purpose::STANDARD
-        .decode(public_key_b64)
+    // AIDEV-NOTE: Consistent crypto API - matches main app patterns (src-tauri/src/lib.rs:211,216)
+    let public_key_bytes = base64::decode(public_key_b64)
         .map_err(|e| format!("Invalid public key encoding: {}", e))?;
-    let signature_bytes = general_purpose::STANDARD
-        .decode(signature_b64)
+    let signature_bytes = base64::decode(signature_b64)
         .map_err(|e| format!("Invalid signature encoding: {}", e))?;
 
-    let public_key = PublicKey::from_bytes(&public_key_bytes)
-        .map_err(|e| format!("Invalid public key: {}", e))?;
-    let signature = Signature::from_bytes(&signature_bytes)
-        .map_err(|e| format!("Invalid signature: {}", e))?;
+    let verifying_key = VerifyingKey::from_bytes(
+        &public_key_bytes.try_into()
+            .map_err(|_| "Invalid public key length")?)
+        .map_err(|e| format!("Invalid public key format: {}", e))?;
+    
+    let signature = Signature::from_bytes(
+        &signature_bytes.try_into()
+            .map_err(|_| "Invalid signature length")?)
+        .map_err(|e| format!("Invalid signature format: {}", e))?;
 
     let canonical_manifest = serde_json::to_string(&manifest)
         .map_err(|e| format!("Failed to serialize manifest: {}", e))?;
 
-    let valid = public_key
+    let valid = verifying_key
         .verify(canonical_manifest.as_bytes(), &signature)
         .is_ok();
 
