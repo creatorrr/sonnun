@@ -905,15 +905,15 @@ import { useEffect, useRef } from 'react'
 
 const EditorPane: React.FC<EditorPaneProps> = ({ onReady }) => {
   const lastContentRef = useRef('')
-  const skipNextUpdateRef = useRef(false)
+  const skipUpdateCountRef = useRef(0)
 
   useEffect(() => {
     if (!editor) return
 
     const handleUpdate = ({ editor: currentEditor }) => {
       // Skip logging if this was a programmatic insertion (AI or citation)
-      if (skipNextUpdateRef.current) {
-        skipNextUpdateRef.current = false
+      if (skipUpdateCountRef.current > 0) {
+        skipUpdateCountRef.current -= 1
         lastContentRef.current = currentEditor.getText()
         return
       }
@@ -943,27 +943,19 @@ const EditorPane: React.FC<EditorPaneProps> = ({ onReady }) => {
 
   // Helper function to find inserted text
   const findInsertedText = (oldText: string, newText: string): string => {
-    // Simple diff algorithm - find the common prefix and suffix
-    let start = 0
-    while (start < oldText.length && start < newText.length && oldText[start] === newText[start]) {
-      start++
-    }
-
-    let oldEnd = oldText.length - 1
-    let newEnd = newText.length - 1
-    while (oldEnd >= start && newEnd >= start && oldText[oldEnd] === newText[newEnd]) {
-      oldEnd--
-      newEnd--
-    }
-
-    return newText.slice(start, newEnd + 1)
+    const diff = diffChars(oldText, newText)
+    let inserted = ''
+    diff.forEach(part => {
+      if (part.added) inserted += part.value
+    })
+    return inserted
   }
 
   // Update citation confirm to skip next update
   const handleCitationConfirm = async (citation: string) => {
     if (!editor || !pendingPaste) return
 
-    skipNextUpdateRef.current = true // Skip logging this insertion
+    skipUpdateCountRef.current += 1 // Skip logging this insertion
     
     // ... rest of existing code
   }
@@ -992,7 +984,7 @@ const AssistantPanel: React.FC<AssistantPanelProps> = ({ onInsertText, skipNextU
 
 **Update**: `src/App.tsx` to pass skip function
 ```tsx
-const skipNextUpdateRef = useRef<() => void>()
+const skipUpdateCountRef = useRef(0)
 
 const handleInsertText = (text: string) => {
   if (editorInstance) {
@@ -1009,14 +1001,12 @@ const handleInsertText = (text: string) => {
 // In JSX
 <EditorPane onReady={(editor) => {
   setEditorInstance(editor)
-  skipNextUpdateRef.current = () => {
-    // This function will be called to skip the next update
-  }
+  skipUpdateCountRef.current += 1 // Skip next provenance update
 }} />
 
 <AssistantPanel 
   onInsertText={handleInsertText} 
-  skipNextUpdate={skipNextUpdateRef.current}
+  skipNextUpdate={skipUpdateCountRef.current}
 />
 ```
 
@@ -1450,7 +1440,7 @@ import ProvenanceLegend from './components/ProvenanceLegend'
   <h2>AI Assistant</h2>
   <AssistantPanel 
     onInsertText={handleInsertText} 
-    skipNextUpdate={skipNextUpdateRef.current}
+    skipNextUpdate={skipUpdateCountRef.current}
   />
   <ProvenanceLegend />
 </div>
@@ -1829,7 +1819,7 @@ const handleExport = async () => {
   <h2>AI Assistant</h2>
   <AssistantPanel 
     onInsertText={handleInsertText} 
-    skipNextUpdate={skipNextUpdateRef.current}
+    skipNextUpdate={skipUpdateCountRef.current}
   />
   <ProvenanceLegend />
   <KeyManager />

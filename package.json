@@ -30,6 +30,7 @@
     "@tiptap/extension-link": "^2.14.0",
     "@tiptap/react": "^2.14.0",
     "@tiptap/starter-kit": "^2.14.0",
+    "diff": "^5.2.0",
     "prosemirror-state": "^1.4.3",
     "prosemirror-view": "^1.40.0",
     "react": "^18.3.1",
@@ -38,7 +39,7 @@
   "devDependencies": {
     "@babel/preset-env": "^7.27.2",
     "@babel/preset-typescript": "^7.27.1",
-    "@tauri-apps/cli": "^2",
+    "@tauri-apps/cli": "^2.5.0",
     "@types/jest": "^29.5.5",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
