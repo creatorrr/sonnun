@@ -10,7 +10,8 @@ use database::Database;
 pub struct ProvenanceEvent {
     pub timestamp: String,
     pub event_type: String,  // "human", "ai", "cited"
-    pub text_hash: String,
+    /// Plain text used for hashing prior to storage
+    pub text: String,
     pub source: String,
     pub span_length: usize,
 }
@@ -63,10 +64,11 @@ pub async fn log_provenance_event(
 ) -> Result<EventResponse, String> {
     let db = Database::new();
     let mut event_with_hash = event.clone();
-    
-    // Generate proper text hash 
-    event_with_hash.text_hash = hash_text(&event.text_hash);
-    
+
+    // Generate proper text hash from plain text
+    let hashed = hash_text(&event.text);
+    event_with_hash.text = hashed;
+
     db.insert_event(event_with_hash)
 }
 
@@ -322,7 +324,7 @@ mod tests {
         let event = ProvenanceEvent {
             timestamp: "2023-01-01T00:00:00Z".to_string(),
             event_type: "human".to_string(),
-            text_hash: "test_hash".to_string(),
+            text: "test_hash".to_string(),
             source: "user".to_string(),
             span_length: 10,
         };

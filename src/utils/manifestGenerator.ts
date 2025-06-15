@@ -10,7 +10,7 @@ export interface ProvenanceStats {
 export interface ProvenanceEvent {
   timestamp: string
   event_type: 'human' | 'ai' | 'cited'
-  text_hash: string
+  text: string
   source: string
   span_length: number
 }

@@ -106,13 +106,13 @@ const EditorPane = forwardRef<
   }, [])
 
   // AIDEV-NOTE: Critical path - logs all content changes to SQLite via Tauri for audit trail
-  const logProvenanceEvent = useCallback(async (eventType: string, textHash: string, source: string, spanLength: number) => {
+  const logProvenanceEvent = useCallback(async (eventType: string, text: string, source: string, spanLength: number) => {
     try {
       await invoke('log_provenance_event', {
         event: {
           timestamp: new Date().toISOString(),
           event_type: eventType,
-          text_hash: textHash,
+          text,
           source,
           span_length: spanLength
         }

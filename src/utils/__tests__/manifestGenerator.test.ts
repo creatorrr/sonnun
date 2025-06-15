@@ -34,6 +34,9 @@ Object.defineProperty(global, 'document', {
   }
 })
 
+// Provide minimal NodeFilter implementation for tests
+;(global as any).NodeFilter = { SHOW_ALL: 0 }
+
 // Mock crypto.subtle for Node.js environment
 Object.defineProperty(global, 'crypto', {
   value: {
@@ -102,7 +105,7 @@ describe('manifestGenerator', () => {
         {
           timestamp: '2023-01-01T00:00:00Z',
           event_type: 'human',
-          text_hash: 'hash1',
+          text: 'hash1',
           source: 'user',
           span_length: 10
         }
@@ -125,14 +128,14 @@ describe('manifestGenerator', () => {
         {
           timestamp: '2023-01-01T02:00:00Z',
           event_type: 'ai',
-          text_hash: 'hash2',
+          text: 'hash2',
           source: 'gpt-4',
           span_length: 5
         },
         {
           timestamp: '2023-01-01T01:00:00Z',
           event_type: 'human',
-          text_hash: 'hash1',
+          text: 'hash1',
           source: 'user',
           span_length: 10
         }
@@ -150,7 +153,7 @@ describe('manifestGenerator', () => {
       const event: ProvenanceEvent = {
         timestamp: '2023-01-01T00:00:00Z',
         event_type: 'human',
-        text_hash: 'hash',
+        text: 'hash',
         source: 'user',
         span_length: 10
       }
@@ -163,7 +166,7 @@ describe('manifestGenerator', () => {
       const event = {
         event_type: 'human' as const,
         span_length: 10
-        // Missing timestamp, text_hash, source
+        // Missing timestamp, text, source
       }
 
       const errors = validateProvenanceEvent(event)
@@ -176,7 +179,7 @@ describe('manifestGenerator', () => {
       const event = {
         timestamp: '2023-01-01T00:00:00Z',
         event_type: 'invalid' as any,
-        text_hash: 'hash',
+        text: 'hash',
         source: 'user',
         span_length: 10
       }
@@ -189,7 +192,7 @@ describe('manifestGenerator', () => {
       const event = {
         timestamp: '2023-01-01T00:00:00Z',
         event_type: 'human' as const,
-        text_hash: 'hash',
+        text: 'hash',
         source: 'user',
         span_length: -5
       }
