@@ -11,13 +11,15 @@ import {
 import type { ProvenanceEvent, ManifestData } from '../manifestGenerator'
 
 // Mock DOM APIs for testing
+// Minimal DOM parser and tree walker stubs
+let lastContent = ''
 Object.defineProperty(global, 'DOMParser', {
   value: class MockDOMParser {
     parseFromString(content: string, _mimeType: string) {
-      // Simple mock - in real tests you'd use jsdom
+      lastContent = content.replace(/<[^>]*>/g, '')
       return {
         body: {
-          textContent: content.replace(/<[^>]*>/g, ''), // Strip HTML tags
+          textContent: lastContent,
           querySelectorAll: () => [],
           hasAttribute: () => false
         }
@@ -28,10 +30,30 @@ Object.defineProperty(global, 'DOMParser', {
 
 Object.defineProperty(global, 'document', {
   value: {
-    createTreeWalker: () => ({
-      nextNode: () => null
-    })
+    createTreeWalker: () => {
+      let done = false
+      return {
+        nextNode: () => {
+          if (done) return null
+          done = true
+          return {
+            nodeType: Node.TEXT_NODE,
+            textContent: lastContent,
+            parentElement: null
+          }
+        }
+      }
+    }
   }
+})
+
+// Provide NodeFilter constant for createTreeWalker options
+Object.defineProperty(global, 'NodeFilter', {
+  value: { SHOW_ALL: 0xFFFFFFFF }
+})
+
+Object.defineProperty(global, 'Node', {
+  value: { ELEMENT_NODE: 1, TEXT_NODE: 3 }
 })
 
 // Mock crypto.subtle for Node.js environment
@@ -39,10 +61,10 @@ Object.defineProperty(global, 'crypto', {
   value: {
     subtle: {
       digest: async (_algorithm: string, data: ArrayBuffer) => {
-        // Simple mock hash - in production use real crypto
-        const text = new TextDecoder().decode(data)
-        const hash = Buffer.from(text).toString('hex').substring(0, 64)
-        return Buffer.from(hash, 'hex').buffer
+        // Use Node's crypto module to generate a stable hash
+        const { createHash } = await import('crypto')
+        const buffer = Buffer.from(new Uint8Array(data))
+        return createHash('sha256').update(buffer).digest().buffer
       }
     }
   }

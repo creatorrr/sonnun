@@ -1029,22 +1029,23 @@ const handleInsertText = (text: string) => {
 ### Step 4.1: Build Manifest Calculation Logic (90 min)
 **Create**: `src/utils/manifestGenerator.ts`
 ```typescript
-export interface ProvenanceManifest {
-  human_tokens: number
-  ai_tokens: number
-  cited_tokens: number
-  total_tokens: number
-  human_percentage: string
-  ai_percentage: string
-  cited_percentage: string
+export interface ManifestData {
+  human_percentage: number
+  ai_percentage: number
+  cited_percentage: number
+  total_characters: number
+  events: ProvenanceEvent[]
   generated_at: string
-  content_hash: string
+  document_hash: string
 }
 
-export function generateProvenanceManifest(html: string): ProvenanceManifest {
+export async function generateCompleteManifest(
+  content: string,
+  events: ProvenanceEvent[]
+): Promise<ManifestData> {
   // Create a temporary DOM element to parse the HTML
   const tempDiv = document.createElement('div')
-  tempDiv.innerHTML = html
+  tempDiv.innerHTML = content
 
   // Count total tokens
   const totalText = tempDiv.textContent || ''
@@ -1069,7 +1070,7 @@ export function generateProvenanceManifest(html: string): ProvenanceManifest {
   const citedPercentage = totalTokens > 0 ? ((citedTokens / totalTokens) * 100).toFixed(1) + '%' : '0%'
 
   // Generate content hash
-  const contentHash = generateContentHash(html)
+  const contentHash = generateContentHash(content)
 
   return {
     human_tokens: humanTokens,
@@ -1103,11 +1104,11 @@ async function generateContentHash(content: string): Promise<string> {
 **Create**: `src/components/ManifestModal.tsx`
 ```tsx
 import React from 'react'
-import { ProvenanceManifest } from '../utils/manifestGenerator'
+import { ManifestData } from '../utils/manifestGenerator'
 
 interface ManifestModalProps {
   isOpen: boolean
-  manifest: ProvenanceManifest | null
+  manifest: ManifestData | null
   onClose: () => void
   onExport?: () => void
 }
@@ -1278,12 +1279,12 @@ export default ManifestModal
 ### Step 4.3: Integrate Manifest Generation (45 min)
 **Update**: `src/App.tsx` with manifest functionality
 ```tsx
-import { generateProvenanceManifest, ProvenanceManifest } from './utils/manifestGenerator'
+import { generateCompleteManifest, ManifestData } from './utils/manifestGenerator'
 import ManifestModal from './components/ManifestModal'
 
 function App() {
   const [editorInstance, setEditorInstance] = useState(null)
-  const [manifestData, setManifestData] = useState<ProvenanceManifest | null>(null)
+  const [manifestData, setManifestData] = useState<ManifestData | null>(null)
   const [showManifest, setShowManifest] = useState(false)
 
   const handlePublish = async () => {
@@ -1291,7 +1292,7 @@ function App() {
     
     try {
       const html = editorInstance.getHTML()
-      const manifest = await generateProvenanceManifest(html)
+      const manifest = await generateCompleteManifest(html, events)
       setManifestData(manifest)
       setShowManifest(true)
     } catch (error) {
