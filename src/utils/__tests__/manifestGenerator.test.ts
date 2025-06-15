@@ -200,7 +200,7 @@ describe('manifestGenerator', () => {
       const event = {
         event_type: 'human' as const,
         span_length: 10
-        // Missing timestamp, text_hash, source
+        // Missing timestamp, text, source
       }
 
       const errors = validateProvenanceEvent(event)

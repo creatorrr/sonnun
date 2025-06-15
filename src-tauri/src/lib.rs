@@ -11,7 +11,7 @@ use database::Database;
 pub struct ProvenanceEvent {
     pub timestamp: String,
     pub event_type: String,  // "human", "ai", "cited"
-    pub text_hash: String,
+    pub text_hash: String,  // SHA-256 hash of inserted text
     pub source: String,
     pub span_length: usize,
 }
@@ -59,16 +59,31 @@ pub fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
+// AIDEV-NOTE: Input struct for frontend - accepts plain text
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProvenanceEventInput {
+    pub timestamp: String,
+    pub event_type: String,
+    pub text: String,  // Plain text from frontend
+    pub source: String,
+    pub span_length: usize,
+}
+
 // AIDEV-NOTE: Write path - all editor changes flow through this function for audit trail
 #[tauri::command]
 pub async fn log_provenance_event(
-    event: ProvenanceEvent,
+    event: ProvenanceEventInput,
 ) -> Result<EventResponse, String> {
     let db = Database::new(DB_URL).await?;
-    let mut event_with_hash = event.clone();
     
-    // Generate proper text hash 
-    event_with_hash.text_hash = hash_text(&event.text_hash);
+    // Convert input to storage format with hashed text
+    let event_with_hash = ProvenanceEvent {
+        timestamp: event.timestamp,
+        event_type: event.event_type,
+        text_hash: hash_text(&event.text),  // Hash the plain text
+        source: event.source,
+        span_length: event.span_length,
+    };
     
     db.insert_event(event_with_hash).await
 }
