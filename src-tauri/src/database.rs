@@ -158,7 +158,7 @@ mod tests {
         ProvenanceEvent {
             timestamp: chrono::Utc::now().to_rfc3339(),
             event_type: event_type.to_string(),
-            text: format!("hash_{}", source),
+            text_hash: format!("hash_{}", source),
             source: source.to_string(),
             span_length,
         }
@@ -174,7 +174,7 @@ mod tests {
         
         assert!(result.is_ok());
         let response = result.unwrap();
-        assert_eq!(response.text_hash, event.text);
+        assert_eq!(response.text_hash, event.text_hash);
         assert_eq!(response.id, 1);
     }
 

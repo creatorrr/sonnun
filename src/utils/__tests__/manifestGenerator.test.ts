@@ -139,7 +139,7 @@ describe('manifestGenerator', () => {
         {
           timestamp: '2023-01-01T00:00:00Z',
           event_type: 'human',
-          text: 'hash1',
+          text_hash: 'hash1',
           source: 'user',
           span_length: 10
         }
@@ -162,14 +162,14 @@ describe('manifestGenerator', () => {
         {
           timestamp: '2023-01-01T02:00:00Z',
           event_type: 'ai',
-          text: 'hash2',
+          text_hash: 'hash2',
           source: 'gpt-4',
           span_length: 5
         },
         {
           timestamp: '2023-01-01T01:00:00Z',
           event_type: 'human',
-          text: 'hash1',
+          text_hash: 'hash1',
           source: 'user',
           span_length: 10
         }
@@ -187,7 +187,7 @@ describe('manifestGenerator', () => {
       const event: ProvenanceEvent = {
         timestamp: '2023-01-01T00:00:00Z',
         event_type: 'human',
-        text: 'hash',
+        text_hash: 'hash',
         source: 'user',
         span_length: 10
       }
@@ -213,7 +213,7 @@ describe('manifestGenerator', () => {
       const event = {
         timestamp: '2023-01-01T00:00:00Z',
         event_type: 'invalid' as any,
-        text: 'hash',
+        text_hash: 'hash',
         source: 'user',
         span_length: 10
       }
@@ -226,7 +226,7 @@ describe('manifestGenerator', () => {
       const event = {
         timestamp: '2023-01-01T00:00:00Z',
         event_type: 'human' as const,
-        text: 'hash',
+        text_hash: 'hash',
         source: 'user',
         span_length: -5
       }
