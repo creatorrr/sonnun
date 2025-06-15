@@ -1,5 +1,6 @@
 // Simple test runner for core functionality without Tauri dependencies
-use std::fs;
+
+use base64::Engine;
 
 // Copy the core modules we want to test
 mod hash_text_test {
@@ -28,14 +29,15 @@ mod hash_text_test {
 mod crypto_test {
     use ed25519_dalek::{Signer, Verifier, SigningKey, VerifyingKey, Signature};
     use rand::rngs::OsRng;
+    use base64::{engine::general_purpose, Engine as _};
     
     pub fn generate_keypair() -> Result<(String, String), String> {
         let mut csprng = OsRng {};
         let signing_key = SigningKey::generate(&mut csprng);
         let verifying_key: VerifyingKey = signing_key.verifying_key();
         
-        let private_key = base64::encode(signing_key.to_bytes());
-        let public_key = base64::encode(verifying_key.to_bytes());
+        let private_key = general_purpose::STANDARD.encode(signing_key.to_bytes());
+        let public_key = general_purpose::STANDARD.encode(verifying_key.to_bytes());
         
         Ok((private_key, public_key))
     }
@@ -51,7 +53,7 @@ mod crypto_test {
         );
         
         let signature = signing_key.sign(content.as_bytes());
-        Ok(base64::encode(signature.to_bytes()))
+        Ok(general_purpose::STANDARD.encode(signature.to_bytes()))
     }
     
     pub fn verify_signature(
@@ -63,9 +65,11 @@ mod crypto_test {
             return Err("Content cannot be empty".to_string());
         }
         
-        let public_key_bytes = base64::decode(public_key_b64)
+        let public_key_bytes = general_purpose::STANDARD
+            .decode(public_key_b64)
             .map_err(|_| "Invalid public key encoding")?;
-        let signature_bytes = base64::decode(signature_b64)
+        let signature_bytes = general_purpose::STANDARD
+            .decode(signature_b64)
             .map_err(|_| "Invalid signature encoding")?;
         
         let verifying_key = VerifyingKey::from_bytes(
@@ -97,15 +101,17 @@ mod crypto_test {
             assert!(!private_key.is_empty());
             assert!(!public_key.is_empty());
             
-            assert!(base64::decode(&private_key).is_ok());
-            assert!(base64::decode(&public_key).is_ok());
+            assert!(general_purpose::STANDARD.decode(&private_key).is_ok());
+            assert!(general_purpose::STANDARD.decode(&public_key).is_ok());
         }
         
         #[tokio::test]
         async fn test_sign_and_verify_document() {
             let content = "This is a test document.";
             let (private_key_b64, public_key_b64) = generate_keypair().unwrap();
-            let private_key_bytes = base64::decode(&private_key_b64).unwrap();
+            let private_key_bytes = general_purpose::STANDARD
+                .decode(&private_key_b64)
+                .unwrap();
             
             let signature_result = sign_document(content.to_string(), private_key_bytes);
             assert!(signature_result.is_ok());
@@ -168,7 +174,9 @@ fn main() {
             
             // Test signing and verification
             let content = "Test document content";
-            if let Ok(private_key_bytes) = base64::decode(&private_key) {
+            if let Ok(private_key_bytes) = base64::engine::general_purpose::STANDARD
+                .decode(&private_key)
+            {
                 if let Ok(signature) = crypto_test::sign_document(content.to_string(), private_key_bytes) {
                     println!("✓ Document signing successful");
                     
