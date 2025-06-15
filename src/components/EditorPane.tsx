@@ -8,12 +8,13 @@ import { Plugin, PluginKey } from 'prosemirror-state'
 import { invoke } from '@tauri-apps/api/core'
 import CitationModal from './CitationModal'
 import { diffChars } from 'diff'
+import type { ProvenanceStats } from '../utils/manifestGenerator'
 
 interface EditorPaneProps {
   onContentChange?: (content: string) => void
   onProvenanceChange?: (stats: ProvenanceStats) => void
   className?: string
-  onReady?: (editor: Editor, setSkipFlag: () => void) => void; // Added onReady prop
+  onReady?: (editor: Editor, setSkipFlag: () => void) => void
 }
 
 // Helper function for Step 3
@@ -25,13 +26,6 @@ const findInsertedText = (oldText: string, newText: string): string => {
     if (part.added) inserted += part.value
   })
   return inserted
-}
-
-interface ProvenanceStats {
-  humanPercentage: number
-  aiPercentage: number
-  citedPercentage: number
-  totalCharacters: number
 }
 
 interface CitationModalState {
