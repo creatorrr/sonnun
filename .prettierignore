@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+target/
+*.min.js
+*.min.css
+
+# Coverage reports
+coverage/
+
+# Rust/Tauri files
+src-tauri/
+Cargo.lock
+
+# Package lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Generated files
+*.generated.*
+
+# Temporary files
+*.tmp
+*.temp
+.cache/

@@ -18,11 +18,15 @@
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
     "test": "jest",
-    "lint": "eslint \"src/**/*.{ts,tsx}\"",
-    "format": "prettier --write \"**/*.{js,ts,tsx,json,md}\"",
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
+    "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
+    "type-check": "tsc --noEmit",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:rust": "cd src-tauri && cargo test"
+    "test:rust": "cd src-tauri && cargo test",
+    "prepare": "husky install"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.5.0",
@@ -57,7 +61,12 @@
     "eslint": "^8.57.0",
     "@typescript-eslint/parser": "^7.2.0",
     "@typescript-eslint/eslint-plugin": "^7.2.0",
-    "eslint-plugin-react": "^7.34.1"
+    "eslint-plugin-react": "^7.34.1",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-jsx-a11y": "^6.8.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "husky": "^9.0.0",
+    "lint-staged": "^15.2.0"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -72,5 +81,14 @@
   "bugs": {
     "url": "https://github.com/creatorrr/sonnun/issues"
   },
-  "homepage": "https://github.com/creatorrr/sonnun#readme"
+  "homepage": "https://github.com/creatorrr/sonnun#readme",
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,css,md}": [
+      "prettier --write"
+    ]
+  }
 }

@@ -1,5 +1,6 @@
 import React from 'react'
 
+// AIDEV-NOTE: Visual component showing provenance distribution stats and color legend
 interface ProvenanceLegendProps {
   stats?: {
     humanPercentage: number
@@ -16,6 +17,7 @@ interface LegendItem {
   description: string
 }
 
+// AIDEV-NOTE: Renders both legend items and optional percentage bar visualization
 const ProvenanceLegend: React.FC<ProvenanceLegendProps> = ({ stats, className = '' }) => {
   // AIDEV-NOTE: Design consistency - these colors must sync with .provenance-{type} CSS classes
   const legendItems: LegendItem[] = [
@@ -58,9 +60,10 @@ const ProvenanceLegend: React.FC<ProvenanceLegendProps> = ({ stats, className = 
                     item.type === 'human'
                       ? stats.humanPercentage
                       : item.type === 'ai'
-                      ? stats.aiPercentage
-                      : stats.citedPercentage
-                  )}%
+                        ? stats.aiPercentage
+                        : stats.citedPercentage
+                  )}
+                  %
                 </span>
               )}
             </div>
@@ -68,8 +71,9 @@ const ProvenanceLegend: React.FC<ProvenanceLegendProps> = ({ stats, className = 
           </div>
         ))}
       </div>
-      
+
       {stats && (
+        // AIDEV-NOTE: Visual bar chart showing percentage distribution
         <div className="legend-bar">
           <div
             className="bar-segment human"

@@ -84,17 +84,17 @@
 /* AIDEV-TODO: Add transition animations for better UX when content type changes */
 .provenance-human {
   background-color: rgba(76, 175, 80, 0.1);
-  border-left: 3px solid #4CAF50;
+  border-left: 3px solid #4caf50;
 }
 
 .provenance-ai {
   background-color: rgba(33, 150, 243, 0.1);
-  border-left: 3px solid #2196F3;
+  border-left: 3px solid #2196f3;
 }
 
 .provenance-cited {
   background-color: rgba(255, 152, 0, 0.1);
-  border-left: 3px solid #FF9800;
+  border-left: 3px solid #ff9800;
 }
 
 /* Component-specific styles */
@@ -426,20 +426,20 @@
 }
 
 .bar-segment.human {
-  background-color: #4CAF50;
+  background-color: #4caf50;
 }
 
 .bar-segment.ai {
-  background-color: #2196F3;
+  background-color: #2196f3;
 }
 
 .bar-segment.cited {
-  background-color: #FF9800;
+  background-color: #ff9800;
 }
 
 /* Button styles */
 .btn-primary {
-  background-color: #2196F3;
+  background-color: #2196f3;
   color: white;
   border: none;
   padding: 0.5rem 1rem;
@@ -449,7 +449,7 @@
 }
 
 .btn-primary:hover {
-  background-color: #1976D2;
+  background-color: #1976d2;
 }
 
 .btn-secondary {

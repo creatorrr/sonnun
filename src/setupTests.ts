@@ -11,9 +11,9 @@ if (typeof window !== 'undefined') {
   Object.defineProperty(window, 'crypto', {
     value: {
       subtle: {
-        digest: jest.fn().mockResolvedValue(new ArrayBuffer(32))
-      }
-    }
+        digest: jest.fn().mockResolvedValue(new ArrayBuffer(32)),
+      },
+    },
   })
 }
 

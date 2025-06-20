@@ -1,16 +1,19 @@
 # Sonnun Implementation Plan: Step-by-Step Guide
 
 ## Overview
-This plan breaks down Sonnun development into 6 phases, each building incrementally on the previous. Each step includes specific files to create, commands to run, and testing criteria.
 
-**Total estimated time**: 12-16 days for MVP + signing
-**Prerequisites**: Node.js, Rust, OpenAI API key
+This plan breaks down Sonnun development into 6 phases, each building incrementally on the previous.
+Each step includes specific files to create, commands to run, and testing criteria.
+
+**Total estimated time**: 12-16 days for MVP + signing **Prerequisites**: Node.js, Rust, OpenAI API
+key
 
 ---
 
 ## Phase 1: Foundation & Basic Editor (Days 1-2)
 
 ### Step 1.1: Initialize Tauri Project (30 min)
+
 ```bash
 # Create new Tauri project
 npm create tauri-app@latest sonnun --template react-ts
@@ -20,10 +23,12 @@ npm install
 # Test basic setup
 npm run tauri dev
 ```
-**Verify**: Tauri window opens with default React content
-**Files created**: Complete Tauri project structure
+
+**Verify**: Tauri window opens with default React content **Files created**: Complete Tauri project
+structure
 
 ### Step 1.2: Install Core Dependencies (15 min)
+
 ```bash
 # Frontend dependencies
 npm install @tiptap/react @tiptap/starter-kit @tiptap/extension-link @tiptap/core
@@ -40,10 +45,13 @@ sha2 = "0.10"
 chrono = { version = "0.4", features = ["serde"] }
 rusqlite = "0.29"
 ```
+
 **Verify**: `npm run tauri dev` still works without errors
 
 ### Step 1.3: Create Basic Layout Structure (45 min)
+
 **Create**: `src/App.tsx`
+
 ```tsx
 import React, { useState, useRef } from 'react'
 import './App.css'
@@ -70,11 +78,15 @@ export default App
 ```
 
 **Create**: `src/App.css`
+
 ```css
 .app-container {
   display: flex;
   height: 100vh;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
 }
 
 .editor-pane {
@@ -104,7 +116,8 @@ export default App
   cursor: pointer;
 }
 
-.editor-placeholder, .assistant-placeholder {
+.editor-placeholder,
+.assistant-placeholder {
   border: 2px dashed #d1d9e0;
   padding: 40px;
   text-align: center;
@@ -112,10 +125,13 @@ export default App
   border-radius: 8px;
 }
 ```
+
 **Verify**: Layout shows two-pane design with placeholder content
 
 ### Step 1.4: Integrate Basic Tiptap Editor (60 min)
+
 **Create**: `src/components/EditorPane.tsx`
+
 ```tsx
 import React, { useEffect } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
@@ -153,6 +169,7 @@ export default EditorPane
 ```
 
 **Update**: `src/App.tsx`
+
 ```tsx
 import React, { useState, useRef } from 'react'
 import EditorPane from './components/EditorPane'
@@ -181,11 +198,13 @@ function App() {
 export default App
 ```
 
-**Create**: `src/components/` directory
-**Verify**: Rich text editor works (bold, italic, headings, lists)
+**Create**: `src/components/` directory **Verify**: Rich text editor works (bold, italic, headings,
+lists)
 
 ### Step 1.5: Add Basic Styling (30 min)
+
 **Update**: `src/App.css` with editor styles
+
 ```css
 /* Add to existing CSS */
 .editor-container {
@@ -204,11 +223,14 @@ export default App
   margin: 16px 0;
 }
 
-.ProseMirror h1, .ProseMirror h2, .ProseMirror h3 {
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3 {
   margin: 24px 0 16px 0;
   font-weight: 600;
 }
 ```
+
 **Verify**: Editor has clean, readable styling
 
 ---
@@ -216,7 +238,9 @@ export default App
 ## Phase 2: AI Integration & Event Logging (Days 3-4)
 
 ### Step 2.1: Set Up Rust Backend Structure (45 min)
+
 **Update**: `src-tauri/src/main.rs`
+
 ```rust
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
@@ -248,8 +272,8 @@ fn main() {
 }
 ```
 
-**Test backend connection**:
-**Update**: `src/App.tsx` to test Rust connection
+**Test backend connection**: **Update**: `src/App.tsx` to test Rust connection
+
 ```tsx
 import { invoke } from '@tauri-apps/api/tauri'
 
@@ -264,12 +288,15 @@ const testBackend = async () => {
 }
 
 // Add button to UI temporarily
-<button onClick={testBackend}>Test Backend</button>
+;<button onClick={testBackend}>Test Backend</button>
 ```
+
 **Verify**: Console shows "Backend is working!" when button clicked
 
 ### Step 2.2: Implement OpenAI Integration (90 min)
+
 **Update**: `src-tauri/src/main.rs` with OpenAI command
+
 ```rust
 use reqwest::Client;
 use serde_json::Value;
@@ -279,7 +306,7 @@ use std::env;
 async fn openai_complete(prompt: String) -> Result<String, String> {
     let api_key = env::var("OPENAI_API_KEY")
         .map_err(|_| "OpenAI API key not found in environment")?;
-    
+
     let client = Client::new();
     let payload = serde_json::json!({
         "model": "gpt-3.5-turbo",
@@ -287,7 +314,7 @@ async fn openai_complete(prompt: String) -> Result<String, String> {
         "max_tokens": 500,
         "temperature": 0.7
     });
-    
+
     let response = client
         .post("https://api.openai.com/v1/chat/completions")
         .bearer_auth(&api_key)
@@ -295,19 +322,19 @@ async fn openai_complete(prompt: String) -> Result<String, String> {
         .send()
         .await
         .map_err(|e| format!("Request failed: {}", e))?;
-    
+
     if !response.status().is_success() {
         return Err(format!("API returned status: {}", response.status()));
     }
-    
+
     let json: Value = response.json().await
         .map_err(|e| format!("JSON parse error: {}", e))?;
-    
+
     let content = json["choices"][0]["message"]["content"]
         .as_str()
         .ok_or("No content in response")?
         .to_string();
-    
+
     Ok(content)
 }
 
@@ -321,12 +348,14 @@ fn main() {
 ```
 
 **Create test**: Add environment variable and test
+
 ```bash
 export OPENAI_API_KEY="your-key-here"
 npm run tauri dev
 ```
 
 **Test OpenAI in frontend**:
+
 ```tsx
 const testOpenAI = async () => {
   try {
@@ -337,13 +366,16 @@ const testOpenAI = async () => {
   }
 }
 ```
+
 **Verify**: OpenAI returns generated text
 
 ### Step 2.3: Set Up SQLite Database (60 min)
-**Update**: `src-tauri/Cargo.toml` - ensure SQL plugin is configured
-**Update**: `src-tauri/tauri.conf.json` - add SQL plugin permissions
+
+**Update**: `src-tauri/Cargo.toml` - ensure SQL plugin is configured **Update**:
+`src-tauri/tauri.conf.json` - add SQL plugin permissions
 
 **Update**: `src-tauri/src/main.rs` with database setup
+
 ```rust
 use tauri_plugin_sql::{Builder as SqlBuilder, Migration, MigrationKind};
 
@@ -369,22 +401,22 @@ fn create_migrations() -> Vec<Migration> {
 fn log_event(event_type: String, text: String, source: String) -> Result<(), String> {
     use sha2::{Sha256, Digest};
     use std::time::{SystemTime, UNIX_EPOCH};
-    
+
     let hash = format!("{:x}", Sha256::digest(text.as_bytes()));
     let timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_secs()
         .to_string();
-    
+
     let conn = rusqlite::Connection::open("sonnun.db")
         .map_err(|e| e.to_string())?;
-    
+
     conn.execute(
         "INSERT INTO events (timestamp, event_type, text_hash, source, span_length) VALUES (?1, ?2, ?3, ?4, ?5)",
         rusqlite::params![timestamp, event_type, hash, source, text.len()]
     ).map_err(|e| e.to_string())?;
-    
+
     Ok(())
 }
 
@@ -395,8 +427,8 @@ fn main() {
             .add_migrations("sqlite:sonnun.db", create_migrations())
             .build())
         .invoke_handler(tauri::generate_handler![
-            test_command, 
-            openai_complete, 
+            test_command,
+            openai_complete,
             log_event
         ])
         .run(tauri::generate_context!())
@@ -405,13 +437,14 @@ fn main() {
 ```
 
 **Test database**:
+
 ```tsx
 const testDatabase = async () => {
   try {
     await invoke('log_event', {
       eventType: 'test',
       text: 'Hello world',
-      source: 'manual'
+      source: 'manual',
     })
     console.log('Database log successful')
   } catch (error) {
@@ -419,10 +452,13 @@ const testDatabase = async () => {
   }
 }
 ```
+
 **Verify**: No errors, `sonnun.db` file created
 
 ### Step 2.4: Build AI Assistant Panel (75 min)
+
 **Create**: `src/components/AssistantPanel.tsx`
+
 ```tsx
 import React, { useState } from 'react'
 import { invoke } from '@tauri-apps/api/tauri'
@@ -445,14 +481,13 @@ const AssistantPanel: React.FC<AssistantPanelProps> = ({ onInsertText }) => {
       const response = await invoke<string>('openai_complete', { prompt })
       setLastResponse(response)
       setPrompt('')
-      
+
       // Log the AI generation event
       await invoke('log_event', {
         eventType: 'ai',
         text: response,
-        source: 'gpt-3.5-turbo'
+        source: 'gpt-3.5-turbo',
       })
-      
     } catch (error) {
       console.error('AI request failed:', error)
       setLastResponse('Error: ' + error)
@@ -478,15 +513,11 @@ const AssistantPanel: React.FC<AssistantPanelProps> = ({ onInsertText }) => {
           rows={3}
           disabled={loading}
         />
-        <button 
-          type="submit" 
-          disabled={!prompt.trim() || loading}
-          className="ask-button"
-        >
+        <button type="submit" disabled={!prompt.trim() || loading} className="ask-button">
           {loading ? 'Generating...' : 'Ask AI'}
         </button>
       </form>
-      
+
       {lastResponse && (
         <div className="response-container">
           <div className="response-text">{lastResponse}</div>
@@ -503,6 +534,7 @@ export default AssistantPanel
 ```
 
 **Update**: `src/App.css` with assistant styles
+
 ```css
 .assistant-panel {
   display: flex;
@@ -562,6 +594,7 @@ export default AssistantPanel
 ```
 
 **Update**: `src/App.tsx` to use AssistantPanel
+
 ```tsx
 import AssistantPanel from './components/AssistantPanel'
 
@@ -573,7 +606,7 @@ const handleInsertText = (text: string) => {
 }
 
 // In JSX
-<div className="assistant-pane">
+;<div className="assistant-pane">
   <h2>AI Assistant</h2>
   <AssistantPanel onInsertText={handleInsertText} />
 </div>
@@ -586,7 +619,9 @@ const handleInsertText = (text: string) => {
 ## Phase 3: Provenance Tracking & Citation (Days 5-6)
 
 ### Step 3.1: Create Provenance Mark Extension (60 min)
+
 **Create**: `src/extensions/ProvenanceMark.ts`
+
 ```typescript
 import { Mark } from '@tiptap/core'
 
@@ -616,8 +651,8 @@ export const ProvenanceMark = Mark.create<ProvenanceOptions>({
     return {
       source: {
         default: null,
-        parseHTML: element => element.getAttribute('data-provenance'),
-        renderHTML: attributes => {
+        parseHTML: (element) => element.getAttribute('data-provenance'),
+        renderHTML: (attributes) => {
           if (!attributes.source) return {}
           return { 'data-provenance': attributes.source }
         },
@@ -639,12 +674,16 @@ export const ProvenanceMark = Mark.create<ProvenanceOptions>({
 
   addCommands() {
     return {
-      setProvenance: attributes => ({ commands }) => {
-        return commands.setMark(this.name, attributes)
-      },
-      unsetProvenance: () => ({ commands }) => {
-        return commands.unsetMark(this.name)
-      },
+      setProvenance:
+        (attributes) =>
+        ({ commands }) => {
+          return commands.setMark(this.name, attributes)
+        },
+      unsetProvenance:
+        () =>
+        ({ commands }) => {
+          return commands.unsetMark(this.name)
+        },
     }
   },
 
@@ -656,16 +695,13 @@ export const ProvenanceMark = Mark.create<ProvenanceOptions>({
 ```
 
 **Update**: `src/components/EditorPane.tsx` to use provenance mark
+
 ```tsx
 import Link from '@tiptap/extension-link'
 import { ProvenanceMark } from '../extensions/ProvenanceMark'
 
 const editor = useEditor({
-  extensions: [
-    StarterKit,
-    Link,
-    ProvenanceMark
-  ],
+  extensions: [StarterKit, Link, ProvenanceMark],
   // ... rest of config
 })
 ```
@@ -673,7 +709,9 @@ const editor = useEditor({
 **Verify**: Editor loads without errors, inspect HTML to see data attributes
 
 ### Step 3.2: Implement Paste Interception (90 min)
+
 **Create**: `src/components/CitationModal.tsx`
+
 ```tsx
 import React, { useState } from 'react'
 
@@ -688,7 +726,7 @@ const CitationModal: React.FC<CitationModalProps> = ({
   isOpen,
   pastedText,
   onConfirm,
-  onCancel
+  onCancel,
 }) => {
   const [citation, setCitation] = useState('')
 
@@ -711,7 +749,7 @@ const CitationModal: React.FC<CitationModalProps> = ({
           {pastedText.substring(0, 200)}
           {pastedText.length > 200 && '...'}
         </div>
-        
+
         <form onSubmit={handleSubmit}>
           <input
             type="text"
@@ -739,6 +777,7 @@ export default CitationModal
 ```
 
 **Update**: `src/App.css` with modal styles
+
 ```css
 .modal-overlay {
   position: fixed;
@@ -811,6 +850,7 @@ export default CitationModal
 ```
 
 **Update**: `src/components/EditorPane.tsx` with paste handling
+
 ```tsx
 import { useState } from 'react'
 import CitationModal from './CitationModal'
@@ -829,7 +869,8 @@ const EditorPane: React.FC<EditorPaneProps> = ({ onReady }) => {
       },
       handlePaste(view, event) {
         const text = event.clipboardData?.getData('text/plain')
-        if (text && text.length > 10) { // Only require citation for substantial pastes
+        if (text && text.length > 10) {
+          // Only require citation for substantial pastes
           event.preventDefault()
           setPendingPaste(text)
           setShowCitationModal(true)
@@ -844,9 +885,11 @@ const EditorPane: React.FC<EditorPaneProps> = ({ onReady }) => {
     if (!editor || !pendingPaste) return
 
     const isURL = citation.startsWith('http://') || citation.startsWith('https://')
-    
+
     // Insert the text with provenance marking
-    editor.chain().focus()
+    editor
+      .chain()
+      .focus()
       .setProvenance({ source: 'cited' })
       .insertContent(pendingPaste)
       .unsetProvenance()
@@ -857,7 +900,7 @@ const EditorPane: React.FC<EditorPaneProps> = ({ onReady }) => {
       const { from, to } = editor.state.selection
       editor.commands.setTextSelection({
         from: from - pendingPaste.length,
-        to: from
+        to: from,
       })
       editor.commands.setLink({ href: citation })
       editor.commands.setTextSelection(to)
@@ -870,7 +913,7 @@ const EditorPane: React.FC<EditorPaneProps> = ({ onReady }) => {
     await invoke('log_event', {
       eventType: 'cited',
       text: pendingPaste,
-      source: citation
+      source: citation,
     })
 
     setShowCitationModal(false)
@@ -899,7 +942,9 @@ const EditorPane: React.FC<EditorPaneProps> = ({ onReady }) => {
 **Verify**: Pasting text >10 chars opens citation modal, adds provenance marks
 
 ### Step 3.3: Add Human Typing Detection (75 min)
+
 **Update**: `src/components/EditorPane.tsx` with typing detection
+
 ```tsx
 import { useEffect, useRef } from 'react'
 
@@ -929,7 +974,7 @@ const EditorPane: React.FC<EditorPaneProps> = ({ onReady }) => {
           invoke('log_event', {
             eventType: 'human',
             text: insertedText,
-            source: 'user'
+            source: 'user',
           }).catch(console.error)
         }
       }
@@ -945,7 +990,7 @@ const EditorPane: React.FC<EditorPaneProps> = ({ onReady }) => {
   const findInsertedText = (oldText: string, newText: string): string => {
     const diff = diffChars(oldText, newText)
     let inserted = ''
-    diff.forEach(part => {
+    diff.forEach((part) => {
       if (part.added) inserted += part.value
     })
     return inserted
@@ -956,7 +1001,7 @@ const EditorPane: React.FC<EditorPaneProps> = ({ onReady }) => {
     if (!editor || !pendingPaste) return
 
     skipUpdateCountRef.current += 1 // Skip logging this insertion
-    
+
     // ... rest of existing code
   }
 
@@ -965,6 +1010,7 @@ const EditorPane: React.FC<EditorPaneProps> = ({ onReady }) => {
 ```
 
 **Update**: `src/components/AssistantPanel.tsx` to skip logging AI insertions
+
 ```tsx
 interface AssistantPanelProps {
   onInsertText?: (text: string) => void
@@ -983,6 +1029,7 @@ const AssistantPanel: React.FC<AssistantPanelProps> = ({ onInsertText, skipNextU
 ```
 
 **Update**: `src/App.tsx` to pass skip function
+
 ```tsx
 const skipUpdateCountRef = useRef(0)
 
@@ -1004,8 +1051,8 @@ const handleInsertText = (text: string) => {
   skipUpdateCountRef.current += 1 // Skip next provenance update
 }} />
 
-<AssistantPanel 
-  onInsertText={handleInsertText} 
+<AssistantPanel
+  onInsertText={handleInsertText}
   skipNextUpdate={skipUpdateCountRef.current}
 />
 ```
@@ -1017,7 +1064,9 @@ const handleInsertText = (text: string) => {
 ## Phase 4: Manifest Generation & Export (Days 7-8)
 
 ### Step 4.1: Build Manifest Calculation Logic (90 min)
+
 **Create**: `src/utils/manifestGenerator.ts`
+
 ```typescript
 export interface ManifestData {
   human_percentage: number
@@ -1043,21 +1092,27 @@ export async function generateCompleteManifest(
 
   // Count AI tokens
   const aiElements = tempDiv.querySelectorAll('span[data-provenance="ai"]')
-  const aiText = Array.from(aiElements).map(el => el.textContent || '').join(' ')
+  const aiText = Array.from(aiElements)
+    .map((el) => el.textContent || '')
+    .join(' ')
   const aiTokens = countTokens(aiText)
 
   // Count cited tokens
   const citedElements = tempDiv.querySelectorAll('span[data-provenance="cited"]')
-  const citedText = Array.from(citedElements).map(el => el.textContent || '').join(' ')
+  const citedText = Array.from(citedElements)
+    .map((el) => el.textContent || '')
+    .join(' ')
   const citedTokens = countTokens(citedText)
 
   // Human tokens are the remainder
   const humanTokens = Math.max(0, totalTokens - aiTokens - citedTokens)
 
   // Calculate percentages
-  const humanPercentage = totalTokens > 0 ? ((humanTokens / totalTokens) * 100).toFixed(1) + '%' : '0%'
+  const humanPercentage =
+    totalTokens > 0 ? ((humanTokens / totalTokens) * 100).toFixed(1) + '%' : '0%'
   const aiPercentage = totalTokens > 0 ? ((aiTokens / totalTokens) * 100).toFixed(1) + '%' : '0%'
-  const citedPercentage = totalTokens > 0 ? ((citedTokens / totalTokens) * 100).toFixed(1) + '%' : '0%'
+  const citedPercentage =
+    totalTokens > 0 ? ((citedTokens / totalTokens) * 100).toFixed(1) + '%' : '0%'
 
   // Generate content hash
   const contentHash = generateContentHash(content)
@@ -1071,7 +1126,7 @@ export async function generateCompleteManifest(
     ai_percentage: aiPercentage,
     cited_percentage: citedPercentage,
     generated_at: new Date().toISOString(),
-    content_hash: contentHash
+    content_hash: contentHash,
   }
 }
 
@@ -1086,12 +1141,14 @@ async function generateContentHash(content: string): Promise<string> {
   const data = encoder.encode(content)
   const hashBuffer = await crypto.subtle.digest('SHA-256', data)
   const hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 ```
 
 ### Step 4.2: Create Manifest Display Modal (60 min)
+
 **Create**: `src/components/ManifestModal.tsx`
+
 ```tsx
 import React from 'react'
 import { ManifestData } from '../utils/manifestGenerator'
@@ -1103,12 +1160,7 @@ interface ManifestModalProps {
   onExport?: () => void
 }
 
-const ManifestModal: React.FC<ManifestModalProps> = ({
-  isOpen,
-  manifest,
-  onClose,
-  onExport
-}) => {
+const ManifestModal: React.FC<ManifestModalProps> = ({ isOpen, manifest, onClose, onExport }) => {
   if (!isOpen || !manifest) return null
 
   const copyToClipboard = () => {
@@ -1119,7 +1171,7 @@ const ManifestModal: React.FC<ManifestModalProps> = ({
     <div className="modal-overlay">
       <div className="modal-content manifest-modal">
         <h3>Content Provenance Manifest</h3>
-        
+
         <div className="manifest-summary">
           <div className="stat-grid">
             <div className="stat-item human">
@@ -1142,9 +1194,7 @@ const ManifestModal: React.FC<ManifestModalProps> = ({
 
         <div className="manifest-details">
           <h4>Full Manifest</h4>
-          <pre className="manifest-json">
-            {JSON.stringify(manifest, null, 2)}
-          </pre>
+          <pre className="manifest-json">{JSON.stringify(manifest, null, 2)}</pre>
         </div>
 
         <div className="modal-actions">
@@ -1169,6 +1219,7 @@ export default ManifestModal
 ```
 
 **Update**: `src/App.css` with manifest modal styles
+
 ```css
 .manifest-modal {
   width: 600px;
@@ -1267,7 +1318,9 @@ export default ManifestModal
 ```
 
 ### Step 4.3: Integrate Manifest Generation (45 min)
+
 **Update**: `src/App.tsx` with manifest functionality
+
 ```tsx
 import { generateCompleteManifest, ManifestData } from './utils/manifestGenerator'
 import ManifestModal from './components/ManifestModal'
@@ -1279,7 +1332,7 @@ function App() {
 
   const handlePublish = async () => {
     if (!editorInstance) return
-    
+
     try {
       const html = editorInstance.getHTML()
       const manifest = await generateCompleteManifest(html, events)
@@ -1318,17 +1371,19 @@ function App() {
 **Verify**: Publish button generates accurate manifest with percentages
 
 ### Step 4.4: Add Visual Provenance Indicators (60 min)
+
 **Update**: `src/App.css` with provenance styling
+
 ```css
 /* Provenance visual indicators */
-span[data-provenance="ai"] {
+span[data-provenance='ai'] {
   background: linear-gradient(90deg, rgba(253, 126, 20, 0.1) 0%, rgba(253, 126, 20, 0.05) 100%);
   border-left: 3px solid #fd7e14;
   padding-left: 4px;
   margin-left: 2px;
 }
 
-span[data-provenance="cited"] {
+span[data-provenance='cited'] {
   background: linear-gradient(90deg, rgba(0, 123, 255, 0.1) 0%, rgba(0, 123, 255, 0.05) 100%);
   border-left: 3px solid #007bff;
   padding-left: 4px;
@@ -1336,8 +1391,8 @@ span[data-provenance="cited"] {
 }
 
 /* Hover effects for provenance spans */
-span[data-provenance="ai"]:hover::after {
-  content: "AI Generated";
+span[data-provenance='ai']:hover::after {
+  content: 'AI Generated';
   position: absolute;
   background: #fd7e14;
   color: white;
@@ -1348,8 +1403,8 @@ span[data-provenance="ai"]:hover::after {
   z-index: 100;
 }
 
-span[data-provenance="cited"]:hover::after {
-  content: "External Source";
+span[data-provenance='cited']:hover::after {
+  content: 'External Source';
   position: absolute;
   background: #007bff;
   color: white;
@@ -1362,6 +1417,7 @@ span[data-provenance="cited"]:hover::after {
 ```
 
 **Create**: `src/components/ProvenanceLegend.tsx`
+
 ```tsx
 import React from 'react'
 
@@ -1391,6 +1447,7 @@ export default ProvenanceLegend
 ```
 
 **Update**: `src/App.css` with legend styles
+
 ```css
 .provenance-legend {
   margin-top: 20px;
@@ -1432,16 +1489,14 @@ export default ProvenanceLegend
 ```
 
 **Update**: `src/App.tsx` to include legend
+
 ```tsx
 import ProvenanceLegend from './components/ProvenanceLegend'
 
 // In assistant-pane
-<div className="assistant-pane">
+;<div className="assistant-pane">
   <h2>AI Assistant</h2>
-  <AssistantPanel 
-    onInsertText={handleInsertText} 
-    skipNextUpdate={skipUpdateCountRef.current}
-  />
+  <AssistantPanel onInsertText={handleInsertText} skipNextUpdate={skipUpdateCountRef.current} />
   <ProvenanceLegend />
 </div>
 ```
@@ -1453,7 +1508,9 @@ import ProvenanceLegend from './components/ProvenanceLegend'
 ## Phase 5: Cryptographic Signing (Days 9-10)
 
 ### Step 5.1: Add Crypto Dependencies (30 min)
+
 **Update**: `src-tauri/Cargo.toml`
+
 ```toml
 [dependencies]
 # ... existing dependencies ...
@@ -1464,7 +1521,9 @@ serde_json = "1.0"
 ```
 
 ### Step 5.2: Implement Key Generation (75 min)
+
 **Update**: `src-tauri/src/main.rs` with crypto functions
+
 ```rust
 use ed25519_dalek::{Keypair, PublicKey, SecretKey, Signature, Signer, Verifier};
 use rand::rngs::OsRng;
@@ -1481,10 +1540,10 @@ struct KeyPair {
 fn generate_keypair() -> Result<KeyPair, String> {
     let mut csprng = OsRng {};
     let keypair: Keypair = Keypair::generate(&mut csprng);
-    
+
     let public_key = general_purpose::STANDARD.encode(keypair.public.as_bytes());
     let private_key = general_purpose::STANDARD.encode(keypair.secret.as_bytes());
-    
+
     Ok(KeyPair {
         public_key,
         private_key,
@@ -1495,17 +1554,17 @@ fn generate_keypair() -> Result<KeyPair, String> {
 fn save_keypair(keypair: KeyPair) -> Result<(), String> {
     let keys_dir = "keys";
     fs::create_dir_all(keys_dir).map_err(|e| e.to_string())?;
-    
+
     fs::write(
         format!("{}/public_key.txt", keys_dir),
         &keypair.public_key
     ).map_err(|e| e.to_string())?;
-    
+
     fs::write(
         format!("{}/private_key.txt", keys_dir),
         &keypair.private_key
     ).map_err(|e| e.to_string())?;
-    
+
     Ok(())
 }
 
@@ -1515,7 +1574,7 @@ fn load_keypair() -> Result<KeyPair, String> {
         .map_err(|_| "Public key not found")?;
     let private_key = fs::read_to_string("keys/private_key.txt")
         .map_err(|_| "Private key not found")?;
-    
+
     Ok(KeyPair {
         public_key: public_key.trim().to_string(),
         private_key: private_key.trim().to_string(),
@@ -1524,7 +1583,9 @@ fn load_keypair() -> Result<KeyPair, String> {
 ```
 
 ### Step 5.3: Implement Document Signing (90 min)
+
 **Update**: `src-tauri/src/main.rs` with signing functions
+
 ```rust
 #[derive(serde::Serialize, serde::Deserialize)]
 struct SignedManifest {
@@ -1541,34 +1602,34 @@ fn sign_document(manifest_json: String) -> Result<SignedManifest, String> {
     let private_key_bytes = general_purpose::STANDARD
         .decode(&keypair.private_key)
         .map_err(|e| format!("Invalid private key: {}", e))?;
-    
+
     let secret_key = SecretKey::from_bytes(&private_key_bytes)
         .map_err(|e| format!("Invalid secret key: {}", e))?;
-    
+
     let public_key_bytes = general_purpose::STANDARD
         .decode(&keypair.public_key)
         .map_err(|e| format!("Invalid public key: {}", e))?;
-    
+
     let public_key = PublicKey::from_bytes(&public_key_bytes)
         .map_err(|e| format!("Invalid public key: {}", e))?;
-    
+
     let keypair = Keypair {
         secret: secret_key,
         public: public_key,
     };
-    
+
     // Parse and normalize the manifest
     let manifest: serde_json::Value = serde_json::from_str(&manifest_json)
         .map_err(|e| format!("Invalid manifest JSON: {}", e))?;
-    
+
     // Create canonical JSON for signing
     let canonical_manifest = serde_json::to_string(&manifest)
         .map_err(|e| format!("Failed to serialize manifest: {}", e))?;
-    
+
     // Sign the manifest
     let signature = keypair.sign(canonical_manifest.as_bytes());
     let signature_b64 = general_purpose::STANDARD.encode(signature.to_bytes());
-    
+
     Ok(SignedManifest {
         manifest,
         signature: signature_b64,
@@ -1603,11 +1664,11 @@ fn export_signed_document(content_html: String, signed_manifest: SignedManifest)
             <p><strong>Signed:</strong> {}</p>
         </div>
     </div>
-    
+
     <div class="content">
         {}
     </div>
-    
+
     <script type="application/json" id="sonnun-manifest">
         {}
     </script>
@@ -1619,12 +1680,12 @@ fn export_signed_document(content_html: String, signed_manifest: SignedManifest)
         content_html,
         serde_json::to_string_pretty(&signed_manifest).unwrap()
     );
-    
+
     // Save to file
-    let filename = format!("signed_document_{}.html", 
+    let filename = format!("signed_document_{}.html",
         chrono::Utc::now().format("%Y%m%d_%H%M%S"));
     fs::write(&filename, &export_html).map_err(|e| e.to_string())?;
-    
+
     Ok(filename)
 }
 
@@ -1650,7 +1711,9 @@ fn main() {
 ```
 
 ### Step 5.4: Add Key Management UI (60 min)
+
 **Create**: `src/components/KeyManager.tsx`
+
 ```tsx
 import React, { useState, useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/tauri'
@@ -1705,8 +1768,8 @@ const KeyManager: React.FC = () => {
           <p className="key-status">✅ Keys generated and saved</p>
           <div className="public-key-display">
             <label>Public Key (for your bio):</label>
-            <input 
-              readOnly 
+            <input
+              readOnly
               value={`prov-pk: ed25519:${publicKey.substring(0, 20)}...`}
               className="public-key-input"
             />
@@ -1718,11 +1781,7 @@ const KeyManager: React.FC = () => {
       ) : (
         <div className="no-keys">
           <p>No cryptographic keys found.</p>
-          <button 
-            onClick={generateKeys} 
-            disabled={loading}
-            className="generate-keys-btn"
-          >
+          <button onClick={generateKeys} disabled={loading} className="generate-keys-btn">
             {loading ? 'Generating...' : 'Generate Keys'}
           </button>
         </div>
@@ -1735,6 +1794,7 @@ export default KeyManager
 ```
 
 **Update**: `src/App.css` with key manager styles
+
 ```css
 .key-manager {
   margin-top: 20px;
@@ -1765,7 +1825,8 @@ export default KeyManager
   background: white;
 }
 
-.copy-key-btn, .generate-keys-btn {
+.copy-key-btn,
+.generate-keys-btn {
   background: #007bff;
   color: white;
   border: none;
@@ -1782,30 +1843,31 @@ export default KeyManager
 ```
 
 ### Step 5.5: Integrate Signing into Export (45 min)
+
 **Update**: `src/App.tsx` with signing functionality
+
 ```tsx
 import KeyManager from './components/KeyManager'
 
 const handleExport = async () => {
   if (!editorInstance || !manifestData) return
-  
+
   try {
     setLoading(true)
-    
+
     // Sign the manifest
     const signedManifest = await invoke('sign_document', {
-      manifestJson: JSON.stringify(manifestData)
+      manifestJson: JSON.stringify(manifestData),
     })
-    
+
     // Export the signed document
     const html = editorInstance.getHTML()
     const filename = await invoke('export_signed_document', {
       contentHtml: html,
-      signedManifest
+      signedManifest,
     })
-    
+
     alert(`Document exported as: ${filename}`)
-    
   } catch (error) {
     console.error('Export failed:', error)
     alert('Export failed: ' + error)
@@ -1815,12 +1877,9 @@ const handleExport = async () => {
 }
 
 // In assistant-pane JSX
-<div className="assistant-pane">
+;<div className="assistant-pane">
   <h2>AI Assistant</h2>
-  <AssistantPanel 
-    onInsertText={handleInsertText} 
-    skipNextUpdate={skipUpdateCountRef.current}
-  />
+  <AssistantPanel onInsertText={handleInsertText} skipNextUpdate={skipUpdateCountRef.current} />
   <ProvenanceLegend />
   <KeyManager />
 </div>
@@ -1833,7 +1892,9 @@ const handleExport = async () => {
 ## Phase 6: Verification & Distribution (Days 11-12)
 
 ### Step 6.1: Build Standalone Verifier (90 min)
+
 **Create**: `src-tauri/src/bin/verify.rs`
+
 ```rust
 use clap::{Arg, Command};
 use std::fs;
@@ -1941,6 +2002,7 @@ fn verify_document(filename: &str, provided_key: Option<&String>) -> Result<Veri
 ```
 
 **Update**: `src-tauri/Cargo.toml` to build verifier
+
 ```toml
 [[bin]]
 name = "sonnun-verify"
@@ -1952,6 +2014,7 @@ clap = "4.0"
 ```
 
 **Test verifier**:
+
 ```bash
 cd src-tauri
 cargo build --bin sonnun-verify
@@ -1959,8 +2022,10 @@ cargo build --bin sonnun-verify
 ```
 
 ### Step 6.2: Create Badge Generation Service (60 min)
-**Create**: `badge-service/` directory with simple Node.js service
-**Create**: `badge-service/package.json`
+
+**Create**: `badge-service/` directory with simple Node.js service **Create**:
+`badge-service/package.json`
+
 ```json
 {
   "name": "sonnun-badge-service",
@@ -1976,6 +2041,7 @@ cargo build --bin sonnun-verify
 ```
 
 **Create**: `badge-service/server.js`
+
 ```javascript
 const express = require('express')
 const fetch = require('node-fetch')
@@ -1983,12 +2049,12 @@ const app = express()
 
 app.get('/badge/:hash.svg', async (req, res) => {
   const { hash } = req.params
-  
+
   try {
     // In a real implementation, you'd verify the document
     // For now, we'll generate a basic SVG badge
     const svg = generateBadgeSVG(hash)
-    
+
     res.setHeader('Content-Type', 'image/svg+xml')
     res.setHeader('Cache-Control', 'public, max-age=3600')
     res.send(svg)
@@ -1999,7 +2065,7 @@ app.get('/badge/:hash.svg', async (req, res) => {
 
 app.get('/verify', async (req, res) => {
   const { url, hash } = req.query
-  
+
   try {
     if (url) {
       // Fetch and verify document from URL
@@ -2034,11 +2100,11 @@ function verifyDocumentHtml(html) {
   // Simplified verification - in production this would use the full crypto verification
   const hasManifest = html.includes('sonnun-manifest')
   const hasSignature = html.includes('"signature"')
-  
+
   return {
     valid: hasManifest && hasSignature,
     result: hasManifest && hasSignature ? 'VALID' : 'INVALID',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   }
 }
 
@@ -2049,8 +2115,9 @@ app.listen(PORT, () => {
 ```
 
 ### Step 6.3: Add Public Key Distribution (45 min)
-**Create**: `public-key-service/` directory
-**Create**: `public-key-service/.well-known/prov.json`
+
+**Create**: `public-key-service/` directory **Create**: `public-key-service/.well-known/prov.json`
+
 ```json
 {
   "pubkey": "REPLACE_WITH_ACTUAL_PUBLIC_KEY",
@@ -2060,28 +2127,37 @@ app.listen(PORT, () => {
 }
 ```
 
-**Update**: Export functionality to include public key instructions
-**Update**: `src/components/ManifestModal.tsx`
+**Update**: Export functionality to include public key instructions **Update**:
+`src/components/ManifestModal.tsx`
+
 ```tsx
-const ManifestModal: React.FC<ManifestModalProps> = ({ /* ... */ }) => {
+const ManifestModal: React.FC<ManifestModalProps> = (
+  {
+    /* ... */
+  }
+) => {
   const copyBioText = () => {
     // This would use the actual public key from the app
-    navigator.clipboard.writeText("prov-pk: ed25519:MCowBQYDK2VwAyEA...")
+    navigator.clipboard.writeText('prov-pk: ed25519:MCowBQYDK2VwAyEA...')
   }
 
   return (
     <div className="modal-overlay">
       <div className="modal-content manifest-modal">
         {/* ... existing content ... */}
-        
+
         <div className="distribution-section">
           <h4>📢 Public Key Distribution</h4>
           <p>To enable verification, add this to your profile bio:</p>
           <div className="bio-text">
             <code>prov-pk: ed25519:MCowBQYDK2VwAyEA...</code>
-            <button onClick={copyBioText} className="copy-btn">Copy</button>
+            <button onClick={copyBioText} className="copy-btn">
+              Copy
+            </button>
           </div>
-          <p><small>Supported platforms: GitHub, Twitter, HN, personal websites</small></p>
+          <p>
+            <small>Supported platforms: GitHub, Twitter, HN, personal websites</small>
+          </p>
         </div>
 
         {/* ... rest of modal ... */}
@@ -2092,7 +2168,9 @@ const ManifestModal: React.FC<ManifestModalProps> = ({ /* ... */ }) => {
 ```
 
 ### Step 6.4: Final Testing & Integration (90 min)
+
 **Create comprehensive test document**:
+
 1. Type some human text
 2. Insert AI-generated content
 3. Paste external content with citation
@@ -2102,39 +2180,46 @@ const ManifestModal: React.FC<ManifestModalProps> = ({ /* ... */ }) => {
 7. Test badge generation
 
 **Create**: `test-workflow.md` documentation
+
 ```markdown
 # Sonnun Test Workflow
 
 ## 1. Content Creation Test
+
 - [ ] Human typing logs correctly
 - [ ] AI insertion marks content as AI
 - [ ] Paste requires citation
 - [ ] Visual indicators show correctly
 
 ## 2. Manifest Generation Test
+
 - [ ] Percentages calculate correctly
 - [ ] All content types counted
 - [ ] JSON structure is valid
 
 ## 3. Signing & Export Test
+
 - [ ] Keys generate successfully
 - [ ] Document signs without errors
 - [ ] Exported HTML includes manifest
 - [ ] File saves correctly
 
 ## 4. Verification Test
+
 - [ ] Standalone verifier works
 - [ ] Valid signatures pass
 - [ ] Invalid signatures fail
 - [ ] Public key matching works
 
 ## 5. Integration Test
+
 - [ ] Full workflow end-to-end
 - [ ] Badge service responds
 - [ ] Public key distribution ready
 ```
 
 **Run full test suite**:
+
 ```bash
 # Build everything
 npm run tauri build
@@ -2158,16 +2243,19 @@ cd ../badge-service && npm install && npm start
 ### Phase 7: Production Deployment (Day 13)
 
 1. **Desktop App Packaging**
+
    - [ ] Build for macOS, Windows, Linux
    - [ ] Test on each platform
    - [ ] Create installers/packages
 
 2. **Verifier Distribution**
+
    - [ ] Package CLI tool for distribution
    - [ ] Create installation scripts
    - [ ] Document usage
 
 3. **Badge Service Deployment**
+
    - [ ] Deploy to cloud service (Vercel/Netlify)
    - [ ] Set up domain
    - [ ] Test public endpoints
@@ -2179,4 +2267,5 @@ cd ../badge-service && npm install && npm start
 
 **Estimated Total Time**: 13-16 days for complete implementation
 
-This plan provides a comprehensive, step-by-step implementation guide with specific files, commands, and verification steps for each phase of the Sonnun project.
+This plan provides a comprehensive, step-by-step implementation guide with specific files, commands,
+and verification steps for each phase of the Sonnun project.

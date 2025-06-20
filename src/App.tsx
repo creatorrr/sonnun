@@ -16,22 +16,29 @@ const App: React.FC = () => {
     humanPercentage: 100,
     aiPercentage: 0,
     citedPercentage: 0,
-    totalCharacters: 0
+    totalCharacters: 0,
   })
   const [isAssistantOpen, setIsAssistantOpen] = useState(true)
   // AIDEV-TODO: Consider using context or state management lib for complex component communication
-  const [skipEditorUpdateFunction, setSkipEditorUpdateFunction] = useState<(() => void) | null>(null)
-  
+  const [skipEditorUpdateFunction, setSkipEditorUpdateFunction] = useState<(() => void) | null>(
+    null
+  )
+
   // AIDEV-NOTE: Component communication - allows AssistantPanel to insert AI content into editor
-  const editorRef = useRef<{ insertAIContent: (content: string, model: string) => void } | null>(null)
+  const editorRef = useRef<{ insertAIContent: (content: string, model: string) => void } | null>(
+    null
+  )
 
   // AIDEV-NOTE: State orchestration - manages document content and provenance flow between components
-  const handleInsertAIText = useCallback((content: string, model: string) => {
-    if (editorRef.current?.insertAIContent) {
-      skipEditorUpdateFunction?.() // Call to set skip flag in EditorPane
-      editorRef.current.insertAIContent(content, model)
-    }
-  }, [skipEditorUpdateFunction])
+  const handleInsertAIText = useCallback(
+    (content: string, model: string) => {
+      if (editorRef.current?.insertAIContent) {
+        skipEditorUpdateFunction?.() // Call to set skip flag in EditorPane
+        editorRef.current.insertAIContent(content, model)
+      }
+    },
+    [skipEditorUpdateFunction]
+  )
 
   return (
     <div className="app-container">
@@ -41,7 +48,7 @@ const App: React.FC = () => {
           <ProvenanceLegend stats={provenanceStats} className="header-legend" />
         </div>
       </header>
-      
+
       <main className="app-main">
         <EditorPane
           ref={editorRef}
@@ -52,7 +59,7 @@ const App: React.FC = () => {
             setSkipEditorUpdateFunction(() => setSkipFlag)
           }}
         />
-        
+
         <AssistantPanel
           onInsertText={handleInsertAIText}
           isOpen={isAssistantOpen}

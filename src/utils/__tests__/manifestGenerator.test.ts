@@ -1,11 +1,11 @@
 // AIDEV-NOTE: Test suite for provenance calculation and manifest generation utilities
 
-import { 
+import {
   calculateProvenanceFromText,
   hashContent,
   generateCompleteManifest,
   validateProvenanceEvent,
-  isValidManifest
+  isValidManifest,
 } from '../manifestGenerator'
 
 import type { ProvenanceEvent, ManifestData } from '../manifestGenerator'
@@ -21,7 +21,7 @@ Object.defineProperty(global, 'DOMParser', {
         body: {
           textContent: content.replace(/<[^>]*>/g, ''), // Strip HTML tags
           querySelectorAll: () => [],
-          hasAttribute: () => false
+          hasAttribute: () => false,
         },
         createTreeWalker: () => {
           let used = false
@@ -32,16 +32,15 @@ Object.defineProperty(global, 'DOMParser', {
               return {
                 nodeType: Node.TEXT_NODE,
                 textContent: content,
-                parentElement: { hasAttribute: () => false }
+                parentElement: { hasAttribute: () => false },
               }
-            }
+            },
           }
-        }
+        },
       }
     }
-  }
+  },
 })
-
 
 Object.defineProperty(global, 'document', {
   value: {
@@ -54,21 +53,21 @@ Object.defineProperty(global, 'document', {
           return {
             nodeType: Node.TEXT_NODE,
             textContent: lastContent,
-            parentElement: null
+            parentElement: null,
           }
-        }
+        },
       }
-    }
-  }
+    },
+  },
 })
 
 // Provide NodeFilter constant for createTreeWalker options
 Object.defineProperty(global, 'NodeFilter', {
-  value: { SHOW_ALL: 0xFFFFFFFF }
+  value: { SHOW_ALL: 0xffffffff },
 })
 
 Object.defineProperty(global, 'Node', {
-  value: { ELEMENT_NODE: 1, TEXT_NODE: 3 }
+  value: { ELEMENT_NODE: 1, TEXT_NODE: 3 },
 })
 
 // Mock crypto.subtle for Node.js environment
@@ -80,9 +79,9 @@ Object.defineProperty(global, 'crypto', {
         const { createHash } = await import('crypto')
         const buffer = Buffer.from(new Uint8Array(data))
         return createHash('sha256').update(buffer).digest().buffer
-      }
-    }
-  }
+      },
+    },
+  },
 })
 
 describe('manifestGenerator', () => {
@@ -107,9 +106,9 @@ describe('manifestGenerator', () => {
         humanPercentage: 60,
         aiPercentage: 30,
         citedPercentage: 10,
-        totalCharacters: 100
+        totalCharacters: 100,
       }
-      
+
       expect(stats.humanPercentage + stats.aiPercentage + stats.citedPercentage).toBe(100)
     })
   })
@@ -119,7 +118,7 @@ describe('manifestGenerator', () => {
       const content = 'Test content'
       const hash1 = await hashContent(content)
       const hash2 = await hashContent(content)
-      
+
       expect(hash1).toBe(hash2)
       expect(hash1).toHaveLength(64) // SHA-256 hex string length
     })
@@ -127,7 +126,7 @@ describe('manifestGenerator', () => {
     it('should generate different hashes for different content', async () => {
       const hash1 = await hashContent('Content A')
       const hash2 = await hashContent('Content B')
-      
+
       expect(hash1).not.toBe(hash2)
     })
   })
@@ -141,8 +140,8 @@ describe('manifestGenerator', () => {
           event_type: 'human',
           text_hash: 'hash1',
           source: 'user',
-          span_length: 10
-        }
+          span_length: 10,
+        },
       ]
 
       const manifest = await generateCompleteManifest(content, events)
@@ -164,19 +163,19 @@ describe('manifestGenerator', () => {
           event_type: 'ai',
           text_hash: 'hash2',
           source: 'gpt-4',
-          span_length: 5
+          span_length: 5,
         },
         {
           timestamp: '2023-01-01T01:00:00Z',
           event_type: 'human',
           text_hash: 'hash1',
           source: 'user',
-          span_length: 10
-        }
+          span_length: 10,
+        },
       ]
 
       const manifest = await generateCompleteManifest('test', events)
-      
+
       expect(manifest.events[0].timestamp).toBe('2023-01-01T01:00:00Z')
       expect(manifest.events[1].timestamp).toBe('2023-01-01T02:00:00Z')
     })
@@ -189,7 +188,7 @@ describe('manifestGenerator', () => {
         event_type: 'human',
         text_hash: 'hash',
         source: 'user',
-        span_length: 10
+        span_length: 10,
       }
 
       const errors = validateProvenanceEvent(event)
@@ -199,14 +198,14 @@ describe('manifestGenerator', () => {
     it('should catch missing required fields', () => {
       const event = {
         event_type: 'human' as const,
-        span_length: 10
+        span_length: 10,
         // Missing timestamp, text, source
       }
 
       const errors = validateProvenanceEvent(event)
       expect(errors.length).toBeGreaterThan(0)
-      expect(errors.some(e => e.includes('Timestamp'))).toBe(true)
-      expect(errors.some(e => e.includes('Source'))).toBe(true)
+      expect(errors.some((e) => e.includes('Timestamp'))).toBe(true)
+      expect(errors.some((e) => e.includes('Source'))).toBe(true)
     })
 
     it('should validate event_type', () => {
@@ -215,11 +214,11 @@ describe('manifestGenerator', () => {
         event_type: 'invalid' as any,
         text_hash: 'hash',
         source: 'user',
-        span_length: 10
+        span_length: 10,
       }
 
       const errors = validateProvenanceEvent(event)
-      expect(errors.some(e => e.includes('Event type'))).toBe(true)
+      expect(errors.some((e) => e.includes('Event type'))).toBe(true)
     })
 
     it('should validate span_length', () => {
@@ -228,11 +227,11 @@ describe('manifestGenerator', () => {
         event_type: 'human' as const,
         text_hash: 'hash',
         source: 'user',
-        span_length: -5
+        span_length: -5,
       }
 
       const errors = validateProvenanceEvent(event)
-      expect(errors.some(e => e.includes('Span length'))).toBe(true)
+      expect(errors.some((e) => e.includes('Span length'))).toBe(true)
     })
   })
 
@@ -245,7 +244,7 @@ describe('manifestGenerator', () => {
         total_characters: 100,
         events: [],
         generated_at: '2023-01-01T00:00:00Z',
-        document_hash: 'hash123'
+        document_hash: 'hash123',
       }
 
       expect(isValidManifest(manifest)).toBe(true)
@@ -255,7 +254,7 @@ describe('manifestGenerator', () => {
       const invalidManifest = {
         human_percentage: '60', // Should be number
         ai_percentage: 30,
-        cited_percentage: 10
+        cited_percentage: 10,
         // Missing required fields
       }
 

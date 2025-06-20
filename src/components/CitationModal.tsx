@@ -12,7 +12,7 @@ const CitationModal: React.FC<CitationModalProps> = ({
   isOpen,
   pastedText,
   onConfirm,
-  onCancel
+  onCancel,
 }) => {
   const [citation, setCitation] = useState('')
 
@@ -46,7 +46,7 @@ const CitationModal: React.FC<CitationModalProps> = ({
             onChange={(e) => setCitation(e.target.value)}
             placeholder="Enter URL or source description..."
             className="citation-input"
-            autoFocus
+            // AIDEV-NOTE: Removed autoFocus for accessibility - focus managed by modal
           />
           <div className="modal-actions">
             <button type="button" onClick={onCancel} className="cancel-btn">

@@ -1,7 +1,7 @@
 import { Mark, mergeAttributes } from '@tiptap/core'
 
 export interface ProvenanceMarkOptions {
-  HTMLAttributes: Record<string, any>
+  HTMLAttributes: Record<string, unknown>
 }
 
 declare module '@tiptap/core' {
@@ -29,26 +29,26 @@ export const ProvenanceMark = Mark.create<ProvenanceMarkOptions>({
     return {
       source: {
         default: 'user',
-        parseHTML: element => element.getAttribute('data-source'),
-        renderHTML: attributes => {
+        parseHTML: (element) => element.getAttribute('data-source'),
+        renderHTML: (attributes) => {
           if (!attributes.source) {
             return {}
           }
           return {
-            'data-source': attributes.source,
+            'data-source': attributes.source as string,
           }
         },
       },
       type: {
         default: 'human',
         // AIDEV-TODO: Add validation to ensure type is one of: 'human', 'ai', 'cited'
-        parseHTML: element => element.getAttribute('data-type'),
-        renderHTML: attributes => {
+        parseHTML: (element) => element.getAttribute('data-type'),
+        renderHTML: (attributes) => {
           if (!attributes.type) {
             return {}
           }
           return {
-            'data-type': attributes.type,
+            'data-type': attributes.type as string,
           }
         },
       },

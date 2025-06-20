@@ -30,12 +30,12 @@ interface AIResponse {
   token_count?: number
 }
 
-const AssistantPanel: React.FC<AssistantPanelProps> = ({ 
-  onInsertText, 
-  isOpen, 
-  onToggle, 
+const AssistantPanel: React.FC<AssistantPanelProps> = ({
+  onInsertText,
+  isOpen,
+  onToggle,
   className = '',
-  skipNextUpdate // Destructure skipNextUpdate
+  skipNextUpdate, // Destructure skipNextUpdate
 }) => {
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
@@ -64,10 +64,10 @@ const AssistantPanel: React.FC<AssistantPanelProps> = ({
     const userMessage: Message = {
       role: 'user',
       content: inputValue.trim(),
-      timestamp: new Date()
+      timestamp: new Date(),
     }
 
-    setMessages(prev => [...prev, userMessage])
+    setMessages((prev) => [...prev, userMessage])
     setInputValue('')
     setIsLoading(true)
     setError(null)
@@ -77,12 +77,12 @@ const AssistantPanel: React.FC<AssistantPanelProps> = ({
       const promptData: AIPrompt = {
         prompt: inputValue.trim(),
         model: selectedModel,
-        max_tokens: maxTokens
+        max_tokens: maxTokens,
       }
 
       // AIDEV-TODO: Add retry logic with exponential backoff for API failures
-      const response: AIResponse = await invoke('query_ai_assistant', { 
-        promptData 
+      const response: AIResponse = await invoke('query_ai_assistant', {
+        promptData,
       })
 
       const assistantMessage: Message = {
@@ -90,35 +90,38 @@ const AssistantPanel: React.FC<AssistantPanelProps> = ({
         content: response.content,
         timestamp: new Date(),
         model: response.model,
-        tokenCount: response.token_count
+        tokenCount: response.token_count,
       }
 
-      setMessages(prev => [...prev, assistantMessage])
+      setMessages((prev) => [...prev, assistantMessage])
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err)
       setError(errorMessage)
-      
+
       // Add error message to chat
       const errorChatMessage: Message = {
         role: 'assistant',
         content: `Error: ${errorMessage}`,
-        timestamp: new Date()
+        timestamp: new Date(),
       }
-      setMessages(prev => [...prev, errorChatMessage])
+      setMessages((prev) => [...prev, errorChatMessage])
     } finally {
       setIsLoading(false)
     }
   }
 
   // AIDEV-NOTE: Core feature - bridges AI chat to editor with model attribution for provenance
-  const handleInsertResponse = useCallback((message: Message) => {
-    if (message.role === 'assistant') {
-      const model = message.model || selectedModel
-      // AIDEV-NOTE: Critical timing - must skip before insertion to prevent race condition
-      skipNextUpdate?.(); // Call skipNextUpdate before inserting text
-      onInsertText(message.content, model)
-    }
-  }, [onInsertText, selectedModel, skipNextUpdate]) // Added skipNextUpdate to dependencies
+  const handleInsertResponse = useCallback(
+    (message: Message) => {
+      if (message.role === 'assistant') {
+        const model = message.model || selectedModel
+        // AIDEV-NOTE: Critical timing - must skip before insertion to prevent race condition
+        skipNextUpdate?.() // Call skipNextUpdate before inserting text
+        onInsertText(message.content, model)
+      }
+    },
+    [onInsertText, selectedModel, skipNextUpdate]
+  ) // Added skipNextUpdate to dependencies
 
   const handleClearChat = useCallback(() => {
     setMessages([])
@@ -127,7 +130,10 @@ const AssistantPanel: React.FC<AssistantPanelProps> = ({
 
   const handleRetry = useCallback(() => {
     if (messages.length > 0) {
-      const lastUserMessage = messages.slice().reverse().find(m => m.role === 'user')
+      const lastUserMessage = messages
+        .slice()
+        .reverse()
+        .find((m) => m.role === 'user')
       if (lastUserMessage) {
         setInputValue(lastUserMessage.content)
       }
@@ -140,7 +146,7 @@ const AssistantPanel: React.FC<AssistantPanelProps> = ({
         <h3>AI Assistant</h3>
         <div className="header-actions">
           {isOpen && (
-            <button 
+            <button
               onClick={handleClearChat}
               className="btn-secondary btn-small"
               title="Clear chat history"
@@ -153,14 +159,14 @@ const AssistantPanel: React.FC<AssistantPanelProps> = ({
           </button>
         </div>
       </div>
-      
+
       {isOpen && (
         <div className="assistant-content">
           {/* Model selection and settings */}
           <div className="assistant-settings">
             <div className="setting-group">
               <label htmlFor="model-select">Model:</label>
-              <select 
+              <select
                 id="model-select"
                 value={selectedModel}
                 onChange={(e) => setSelectedModel(e.target.value)}
@@ -194,21 +200,23 @@ const AssistantPanel: React.FC<AssistantPanelProps> = ({
               </button>
             </div>
           )}
-          
+
           {/* Messages container */}
           <div className="messages-container">
             {messages.length === 0 && (
               <div className="empty-state">
                 <p>Start a conversation with the AI assistant!</p>
-                <p className="hint">Try asking: "Help me write about renewable energy"</p>
+                <p className="hint">
+                  Try asking: &ldquo;Help me write about renewable energy&rdquo;
+                </p>
               </div>
             )}
-            
+
             {messages.map((message, index) => (
               <div key={index} className={`message ${message.role}`}>
                 <div className="message-header">
                   <span className="message-role">
-                    {message.role === 'user' ? 'You' : (message.model || 'Assistant')}
+                    {message.role === 'user' ? 'You' : message.model || 'Assistant'}
                   </span>
                   <span className="message-timestamp">
                     {message.timestamp.toLocaleTimeString()}
@@ -228,7 +236,7 @@ const AssistantPanel: React.FC<AssistantPanelProps> = ({
                       Insert into Document
                     </button>
                     <button
-                      onClick={() => navigator.clipboard.writeText(message.content)}
+                      onClick={() => void navigator.clipboard.writeText(message.content)}
                       className="btn-secondary btn-small"
                       title="Copy to clipboard"
                     >
@@ -240,9 +248,9 @@ const AssistantPanel: React.FC<AssistantPanelProps> = ({
             ))}
             <div ref={messagesEndRef} />
           </div>
-          
+
           {/* Input form */}
-          <form onSubmit={handleSubmit} className="input-form">
+          <form onSubmit={(e) => void handleSubmit(e)} className="input-form">
             <textarea
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
@@ -252,14 +260,12 @@ const AssistantPanel: React.FC<AssistantPanelProps> = ({
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()
-                  handleSubmit(e)
+                  void handleSubmit(e)
                 }
               }}
             />
             <div className="form-actions">
-              <span className="input-hint">
-                Press Enter to send, Shift+Enter for new line
-              </span>
+              <span className="input-hint">Press Enter to send, Shift+Enter for new line</span>
               <button type="submit" disabled={isLoading || !inputValue.trim()}>
                 {isLoading ? 'Thinking...' : 'Send'}
               </button>

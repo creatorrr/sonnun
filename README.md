@@ -1,17 +1,19 @@
 # Sonnun: Provably Honest Content Creation
 
-> A desktop markdown editor that cryptographically proves content provenance - distinguishing human writing from AI assistance and external sources.
+> A desktop markdown editor that cryptographically proves content provenance - distinguishing human
+> writing from AI assistance and external sources.
 
 ![Sonnun Logo](https://via.placeholder.com/800x200/007bff/ffffff?text=Sonnun+%E2%80%A2+Provably+Honest+Content)
 
 ## 🎯 Mission
 
-Combat "AI slop" by making honest attribution easier than deception. Writers get a tool that transparently tracks content origins; readers get cryptographic proof of authorship.
+Combat "AI slop" by making honest attribution easier than deception. Writers get a tool that
+transparently tracks content origins; readers get cryptographic proof of authorship.
 
 ## ✨ Key Features
 
 - **🔍 Real-time Provenance Tracking** - Every text insertion logged with source attribution
-- **📋 Citation Enforcement** - Paste operations require source attribution via modal dialogs  
+- **📋 Citation Enforcement** - Paste operations require source attribution via modal dialogs
 - **👁️ Visual Indicators** - Different content types visually marked in the editor
 - **🔐 Cryptographic Signing** - Documents signed with ed25519 keys for integrity proof
 - **📊 Manifest Generation** - JSON reports showing exact percentages of human/AI/cited content
@@ -20,6 +22,7 @@ Combat "AI slop" by making honest attribution easier than deception. Writers get
 ## 🏗️ Architecture
 
 **Trust Chain:**
+
 ```
 author laptop ──signs──► markdown.html + c2pa.json
                  ▲                         │
@@ -28,8 +31,9 @@ author laptop ──signs──► markdown.html + c2pa.json
 ```
 
 **Tech Stack:**
+
 - **Frontend**: React, TypeScript, Tiptap editor
-- **Backend**: Rust, Tauri framework  
+- **Backend**: Rust, Tauri framework
 - **Database**: SQLite with append-only event log
 - **AI**: OpenAI API integration
 - **Crypto**: ed25519 signatures, C2PA standard
@@ -37,11 +41,13 @@ author laptop ──signs──► markdown.html + c2pa.json
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - [Node.js](https://nodejs.org/) (latest LTS)
 - [Rust](https://rustup.rs/) (latest stable)
 - OpenAI API key
 
 ### Setup
+
 ```bash
 # Clone the repository
 git clone https://github.com/your-org/sonnun.git
@@ -58,6 +64,7 @@ npm run tauri dev
 ```
 
 ### First Run
+
 1. Generate cryptographic keys via the Key Manager in the sidebar
 2. Copy your public key to your profile bio: `prov-pk: ed25519:MCowBQYDK2VwAyEA...`
 3. Start writing! The app will track all content sources automatically
@@ -92,7 +99,7 @@ cargo test               # Run tests
 ## 🌟 Usage Example
 
 1. **Write Content**: Type naturally in the editor - all human input is tracked
-2. **Use AI Assistant**: Ask ChatGPT for help via the sidebar - AI content is marked automatically  
+2. **Use AI Assistant**: Ask ChatGPT for help via the sidebar - AI content is marked automatically
 3. **Cite External Sources**: Paste content triggers citation modal - sources are linked and tracked
 4. **Generate Manifest**: Click "Publish" to see provenance breakdown
 5. **Export & Sign**: Generate cryptographically signed HTML with embedded proof
@@ -103,40 +110,43 @@ cargo test               # Run tests
 All text is categorized and tracked:
 
 ```typescript
-if (event.agent === 'ai') ai_tokens += span_length;
-else if (event.agent === 'cited') cited_tokens += span_length;
-else human_tokens += span_length;
+if (event.agent === 'ai') ai_tokens += span_length
+else if (event.agent === 'cited') cited_tokens += span_length
+else human_tokens += span_length
 ```
 
 **Example Manifest:**
+
 ```json
 {
   "human_percentage": "70.2%",
-  "ai_percentage": "20.1%", 
+  "ai_percentage": "20.1%",
   "cited_percentage": "9.7%",
   "total_tokens": 1247,
   "signature": "cryptographic_proof...",
   "public_key": "ed25519:MCowBQYDK2VwAyEA..."
 }
 ```
+
 ### Programmatic Manifest Generation
 
 ```typescript
-import { generateCompleteManifest } from "./src/utils/manifestGenerator"
+import { generateCompleteManifest } from './src/utils/manifestGenerator'
 
 const manifest = await generateCompleteManifest(html, events)
 console.log(manifest)
 ```
 
-
 ## 🛡️ Verification
 
 **For Readers:**
+
 ```bash
 curl -s https://prove.dev/verify?url=https://blog.com/post.html | jq .result
 ```
 
 **Public Key Distribution:**
+
 - Profile bio: `prov-pk: ed25519:MCowBQYDK2VwAyEA...`
 - Webfinger: `/.well-known/prov.json`
 - Badge verification with embedded pubkey hash
@@ -144,7 +154,7 @@ curl -s https://prove.dev/verify?url=https://blog.com/post.html | jq .result
 ## 🗺️ Roadmap
 
 - [x] **Phase 1**: Basic editor with AI integration
-- [x] **Phase 2**: Provenance tracking and citation enforcement  
+- [x] **Phase 2**: Provenance tracking and citation enforcement
 - [x] **Phase 3**: Manifest generation and visual indicators
 - [x] **Phase 4**: Cryptographic signing and export
 - [ ] **Phase 5**: Standalone verification tools
@@ -153,7 +163,8 @@ curl -s https://prove.dev/verify?url=https://blog.com/post.html | jq .result
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [development guide](CLAUDE.md) for coding standards and workflow.
+We welcome contributions! Please see our [development guide](CLAUDE.md) for coding standards and
+workflow.
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/amazing-feature`
