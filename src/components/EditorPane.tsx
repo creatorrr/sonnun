@@ -14,7 +14,7 @@ import { ProvenanceMark } from '../extensions/ProvenanceMark'
 import { Plugin, PluginKey } from 'prosemirror-state'
 import { invoke } from '@tauri-apps/api/core'
 import CitationModal from './CitationModal'
-import { diffChars } from 'diff'
+import { diffChars, Change } from 'diff'
 import type { ProvenanceStats } from '../utils/manifestGenerator'
 
 interface EditorPaneProps {
@@ -29,7 +29,7 @@ interface EditorPaneProps {
 const findInsertedText = (oldText: string, newText: string): string => {
   const diff = diffChars(oldText, newText)
   let inserted = ''
-  diff.forEach((part) => {
+  diff.forEach((part: Change) => {
     if (part.added) inserted += part.value
   })
   return inserted
@@ -65,16 +65,16 @@ const EditorPane = forwardRef<
 
     // AIDEV-NOTE: Core algorithm for calculating real-time provenance stats from Tiptap doc tree
     // AIDEV-QUESTION: Should we cache stats calculation for large documents (>10k chars)?
-    const calculateProvenanceStats = useCallback((editor: any): ProvenanceStats => {
+    const calculateProvenanceStats = useCallback((editor: Editor): ProvenanceStats => {
       const doc = editor.state.doc
       let humanChars = 0
       let aiChars = 0
       let citedChars = 0
 
-      // AIDEV-TODO: Add proper TypeScript types for node parameter
-      doc.descendants((node: any) => {
+      // AIDEV-NOTE: Using ProseMirror node types for type safety
+      doc.descendants((node) => {
         if (node.marks) {
-          node.marks.forEach((mark: any) => {
+          node.marks.forEach((mark) => {
             // Reverted to 'provenanceMark' to match the existing extension's name
             if (mark.type.name === 'provenanceMark') {
               const text = node.textContent
@@ -142,7 +142,7 @@ const EditorPane = forwardRef<
               new Plugin({
                 key: new PluginKey('pasteHandler'),
                 props: {
-                  handlePaste(view: any, event: ClipboardEvent, _slice: any) {
+                  handlePaste(view, event: ClipboardEvent, _slice) {
                     const text = event.clipboardData?.getData('text/plain')
 
                     // AIDEV-NOTE: UX decision point - 50 char threshold triggers citation modal
@@ -159,7 +159,7 @@ const EditorPane = forwardRef<
 
                     // Small pastes default to human content
                     if (text && text.length <= 10) {
-                      logProvenanceEvent('human', text, 'user', text.length)
+                      void logProvenanceEvent('human', text, 'user', text.length)
                     }
 
                     return false
@@ -213,7 +213,7 @@ const EditorPane = forwardRef<
             const insertedText = findInsertedText(lastText, currentText)
             if (insertedText.trim().length > 0) {
               // console.log('Human typed:', insertedText);
-              logProvenanceEvent('human', insertedText, 'user', insertedText.length)
+              void logProvenanceEvent('human', insertedText, 'user', insertedText.length)
             }
           }
           lastContentRef.current = currentText
@@ -248,17 +248,13 @@ const EditorPane = forwardRef<
 
         // Insert content with provenance mark
         // For compatibility with existing `calculateProvenanceStats`, we ensure `type: 'cited'` is set.
+        // AIDEV-NOTE: Insert content first, then apply mark (insertContentAt doesn't support marks option)
         editor
           .chain()
           .focus()
-          .insertContentAt(resolvedInsertPos, pastedText, {
-            marks: [
-              {
-                type: editor.schema.marks.provenanceMark ? 'provenanceMark' : ProvenanceMark.name,
-                attrs: { source: citation, type: 'cited' },
-              },
-            ],
-          })
+          .insertContentAt(resolvedInsertPos, pastedText)
+          .setTextSelection({ from: resolvedInsertPos, to: resolvedInsertPos + pastedText.length })
+          .setMark(ProvenanceMark.name, { source: citation, type: 'cited' })
           .run()
 
         const isURL = /^(ftp|http|https):\/\/[^ "]+$/.test(citation)
@@ -279,11 +275,11 @@ const EditorPane = forwardRef<
           editor.chain().focus().insertContentAt(insertedTextEndPos, ` (source: ${citation})`).run()
         }
 
-        logProvenanceEvent('cited', pastedText, citation, pastedText.length)
+        void logProvenanceEvent('cited', pastedText, citation, pastedText.length)
 
         setCitationModal({ isOpen: false, pastedText: '', insertPosition: undefined })
       },
-      [editor, citationModal, logProvenanceEvent, ProvenanceMark.name]
+      [editor, citationModal, logProvenanceEvent]
     )
 
     // Plan Step 2: Create handleCitationCancel function:
@@ -310,7 +306,7 @@ const EditorPane = forwardRef<
           ],
         })
 
-        logProvenanceEvent('ai', content, model, content.length)
+        void logProvenanceEvent('ai', content, model, content.length)
       },
       [editor, logProvenanceEvent]
     )
@@ -326,26 +322,10 @@ const EditorPane = forwardRef<
 
     return (
       <div className={`editor-pane ${className}`}>
-        <div className="editor-toolbar">
-          <h2>Document Editor</h2>
-          <div className="editor-actions">
-            <button onClick={() => editor?.commands.focus()} className="btn-secondary">
-              Focus Editor
-            </button>
-            <button
-              onClick={() => {
-                const content = editor?.getHTML() || ''
-                navigator.clipboard.writeText(content)
-              }}
-              className="btn-secondary"
-            >
-              Copy HTML
-            </button>
+        <div className="editor-wrapper">
+          <div className="editor-content">
+            <EditorContent editor={editor} />
           </div>
-        </div>
-
-        <div className="editor-content">
-          <EditorContent editor={editor} />
         </div>
 
         <CitationModal

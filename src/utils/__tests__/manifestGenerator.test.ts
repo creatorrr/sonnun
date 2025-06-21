@@ -12,7 +12,7 @@ import type { ProvenanceEvent, ManifestData } from '../manifestGenerator'
 
 // Mock DOM APIs for testing
 // Minimal DOM parser and tree walker stubs
-let lastContent = ''
+const lastContent = ''
 Object.defineProperty(global, 'DOMParser', {
   value: class MockDOMParser {
     parseFromString(content: string, _mimeType: string) {

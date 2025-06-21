@@ -141,7 +141,7 @@ const AssistantPanel: React.FC<AssistantPanelProps> = ({
   }, [messages])
 
   return (
-    <div className={`assistant-panel ${isOpen ? 'open' : 'closed'} ${className}`}>
+    <div className={`assistant-panel ${isOpen ? 'open' : ''} ${className}`}>
       <div className="assistant-header">
         <h3>AI Assistant</h3>
         <div className="header-actions">

@@ -123,16 +123,19 @@ export function validateProvenanceEvent(event: Partial<ProvenanceEvent>): string
   return errors
 }
 
-export function isValidManifest(manifest: any): manifest is ManifestData {
+export function isValidManifest(manifest: unknown): manifest is ManifestData {
+  if (manifest === null || typeof manifest !== 'object') {
+    return false
+  }
+  
+  const m = manifest as Record<string, unknown>
   return (
-    manifest !== null &&
-    typeof manifest === 'object' &&
-    typeof manifest.human_percentage === 'number' &&
-    typeof manifest.ai_percentage === 'number' &&
-    typeof manifest.cited_percentage === 'number' &&
-    typeof manifest.total_characters === 'number' &&
-    Array.isArray(manifest.events) &&
-    typeof manifest.generated_at === 'string' &&
-    typeof manifest.document_hash === 'string'
+    typeof m.human_percentage === 'number' &&
+    typeof m.ai_percentage === 'number' &&
+    typeof m.cited_percentage === 'number' &&
+    typeof m.total_characters === 'number' &&
+    Array.isArray(m.events) &&
+    typeof m.generated_at === 'string' &&
+    typeof m.document_hash === 'string'
   )
 }

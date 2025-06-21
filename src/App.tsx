@@ -18,7 +18,7 @@ const App: React.FC = () => {
     citedPercentage: 0,
     totalCharacters: 0,
   })
-  const [isAssistantOpen, setIsAssistantOpen] = useState(true)
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false)
   // AIDEV-TODO: Consider using context or state management lib for complex component communication
   const [skipEditorUpdateFunction, setSkipEditorUpdateFunction] = useState<(() => void) | null>(
     null
@@ -46,6 +46,13 @@ const App: React.FC = () => {
         <h1>Sonnun</h1>
         <div className="header-tools">
           <ProvenanceLegend stats={provenanceStats} className="header-legend" />
+          <button 
+            className="btn-secondary"
+            onClick={() => setIsAssistantOpen(!isAssistantOpen)}
+            aria-label="Toggle AI Assistant"
+          >
+            AI Assistant
+          </button>
         </div>
       </header>
 
